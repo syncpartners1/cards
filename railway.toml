@@ -2,5 +2,5 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npx serve@14 . -l $PORT --single"
+startCommand = "npm start"
 restartPolicyType = "on_failure"
