@@ -3,7 +3,7 @@
 ## Project Overview
 **Change Navigator** is a PWA (Progressive Web App) built for ABN Consulting.
 It presents 54 inspiration cards in Hebrew and English decks, allowing users to draw a random card, browse all cards, save favorites, keep a personal journal, and email cards to themselves.
-Deployed at: Railway (see Railway dashboard for URL)
+Deployed at: https://cnapp.up.railway.app
 Git branch: `claude/migrate-to-railway-4sCTd`
 
 ---
