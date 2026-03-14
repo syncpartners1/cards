@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ניווט שינוי">
+    <title>Change Navigator - Landing Page</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+        .gradient-text { background: linear-gradient(90deg, #1e293b, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
+    <!-- Header / Branding -->
+    <header class="py-8 px-6 max-w-5xl mx-auto flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="bg-slate-900 p-2 rounded-xl shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            </div>
+            <div>
+                <h1 class="font-black text-xl tracking-tight">CHANGE NAVIGATOR</h1>
+                <p class="text-[8px] font-bold text-slate-400 tracking-[0.2em] uppercase">ABN Consulting</p>
+            </div>
+        </div>
+    </header>
+    <main class="max-w-5xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+
+        <!-- Hero Section -->
+        <div class="space-y-8">
+            <div class="inline-block px-4 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-bold uppercase tracking-widest">Digital Companion</div>
+            <h2 class="text-5xl md:text-6xl font-black leading-tight text-slate-900">
+                ניווט חכם לעולם של <span class="gradient-text">שינוי</span>
+            </h2>
+            <p class="text-xl text-slate-600 leading-relaxed max-w-lg">
+                האפליקציה הדיגיטלית של ABN Consulting מלווה אתכם בתהליכי צמיחה, קבלת החלטות ופיתוח מנהיגות באמצעות קלפי השראה ויומן תובנות אישי.
+            </p>
+
+            <div class="flex flex-wrap gap-4">
+                <a href="app.html"
+                   class="bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2">
+                    כניסה לאפליקציה
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+                <button onclick="document.getElementById('instructions').scrollIntoView({behavior: 'smooth'})"
+                    class="bg-white border border-slate-200 text-slate-900 px-8 py-4 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+                    איך מתקינים?
+                </button>
+            </div>
+        </div>
+
+        <!-- QR Code Section -->
+        <div class="flex justify-center lg:justify-end">
+            <div class="glass p-12 rounded-[3rem] shadow-2xl border border-white relative">
+                <div id="qrcode" class="bg-white p-4 rounded-2xl"></div>
+                <div class="mt-8 text-center">
+                    <p class="font-bold text-slate-800">סרקו את הקוד</p>
+                    <p class="text-xs text-slate-400 mt-1">כדי לפתוח בנייד שלכם</p>
+                </div>
+                <!-- Decorative Elements -->
+                <div class="absolute -top-4 -right-4 w-12 h-12 bg-blue-500 rounded-full blur-2xl opacity-50"></div>
+                <div class="absolute -bottom-4 -left-4 w-16 h-16 bg-slate-900 rounded-full blur-2xl opacity-20"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Instructions Section -->
+    <section id="instructions" class="bg-slate-900 py-24 px-6 text-white mt-24">
+        <div class="max-w-5xl mx-auto">
+            <h3 class="text-3xl font-black mb-16 text-center">איך להוסיף למסך הבית?</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <!-- iPhone -->
+                <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center font-bold">01</div>
+                        <h4 class="text-xl font-bold">משתמשי iPhone</h4>
+                    </div>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex items-start gap-3">
+                            <span class="text-blue-400 font-bold">1.</span>
+                            פתחו את הקישור בדפדפן <strong>Safari</strong>.
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-blue-400 font-bold">2.</span>
+                            לחצו על כפתור השיתוף (מרובע עם חץ למעלה) בתחתית המסך.
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-blue-400 font-bold">3.</span>
+                            גללו מטה ובחרו ב-<strong>"הוסף למסך הבית"</strong> (Add to Home Screen).
+                        </li>
+                    </ul>
+                </div>
+                <!-- Android -->
+                <div class="bg-white/5 p-8 rounded-[2rem] border border-white/10">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center font-bold">02</div>
+                        <h4 class="text-xl font-bold">משתמשי Android</h4>
+                    </div>
+                    <ul class="space-y-4 text-slate-300">
+                        <li class="flex items-start gap-3">
+                            <span class="text-blue-400 font-bold">1.</span>
+                            פתחו את הקישור בדפדפן <strong>Chrome</strong>.
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-blue-400 font-bold">2.</span>
+                            לחצו על שלוש הנקודות (תפריט) בפינת המסך.
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <span class="text-blue-400 font-bold">3.</span>
+                            בחרו ב-<strong>"התקן אפליקציה"</strong> או <strong>"הוסף למסך הבית"</strong>.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-12 px-6 text-center text-slate-400 text-xs font-bold uppercase tracking-[0.4em] space-y-3">
+        <p>&copy; 2025 ABN Consulting - All Rights Reserved</p>
+        <a href="admin.html" class="inline-block text-slate-600 hover:text-slate-400 text-[10px] tracking-widest transition-colors">
+            ⚙ Admin
+        </a>
+    </footer>
+
+    <script>
+        // Build the app URL (same origin, /app.html)
+        const appUrl = window.location.origin + window.location.pathname.replace('index.html', '') + 'app.html';
+
+        // Generate QR Code pointing to app.html
+        new QRCode(document.getElementById("qrcode"), {
+            text: appUrl,
+            width: 200,
+            height: 200,
+            colorDark:  "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

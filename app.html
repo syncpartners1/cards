@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ניווט שינוי">
+  <title>Change Navigator</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <script src="cards-config.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* ── 3D Card Flip ─────────────────────────── */
+    .card-3d { perspective: 1000px; }
+    .card-inner {
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform; /* pre-allocate GPU layer on Android */
+    }
+    .card-inner.flipped { transform: rotateY(180deg); }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      /* will-change hints the browser to pre-allocate a GPU layer per face,
+         fixing the Android Chrome bug where backface-visibility:hidden causes
+         blank faces — without breaking LTR card-flip (translateZ broke LTR). */
+      will-change: transform;
+    }
+    .card-face-back { transform: rotateY(180deg); }
+
+    /* ── Layout ───────────────────────────────── */
+    #content-area {
+      height: calc(100dvh - 56px - 64px - env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #bottom-nav {
+      height: calc(64px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* ── Nav active state ─────────────────────── */
+    .nav-btn svg { color: #64748b; transition: color 0.15s; }
+    .nav-btn span { color: #64748b; transition: color 0.15s; }
+    .nav-btn.active svg { color: #60a5fa; }
+    .nav-btn.active span { color: #60a5fa; }
+
+    /* ── Tab animations ───────────────────────── */
+    .tab-panel { animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Text utilities ───────────────────────── */
+    .line-clamp-2 {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ── Scrollbar hide ───────────────────────── */
+    #content-area::-webkit-scrollbar { display: none; }
+    #content-area { scrollbar-width: none; }
+
+    /* ── Modal backdrop ───────────────────────── */
+    .modal-backdrop {
+      background: rgba(2, 6, 23, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    /* ── Card display — 2:3 ratio matching source images (750×1125) ── */
+    .card-display {
+      aspect-ratio: 2 / 3;
+      width: 100%;
+      position: relative;
+    }
+    /*
+     * Fallback for Android Chrome < 88 (and any browser without aspect-ratio).
+     * Without this, .card-display collapses to 0px height on older Android,
+     * making all card images completely invisible ("empty cards").
+     * Uses the classic padding-bottom intrinsic ratio trick instead.
+     */
+    @supports not (aspect-ratio: 2 / 3) {
+      .card-display {
+        padding-bottom: 150%; /* height = 3/2 × width  →  2:3 aspect ratio */
+        height: 0;
+      }
+      .card-display > .card-inner {
+        position: absolute;
+        inset: 0;
+      }
+    }
+
+    /* ── Image protection — prevent right-click save / drag / iOS long-press ── */
+    .card-face img,
+    #email-thumb,
+    #browse-grid img,
+    #favs-grid img,
+    #journal-list img {
+      -webkit-user-drag: none;
+      -webkit-touch-callout: none;
+      user-select: none;
+      pointer-events: none;   /* right-click targets parent div, no "Save image" option */
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white overflow-hidden" style="height: 100dvh;">
+
+  <!-- ════════════════════════════════════════════
+       LANGUAGE SELECTION SCREEN
+  ════════════════════════════════════════════ -->
+  <div id="lang-screen" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center px-8 py-12">
+    <!-- Logo -->
+    <img src="icon.svg" alt="Change Navigator" class="w-36 h-36 rounded-3xl shadow-2xl mb-10" draggable="false">
+
+    <h2 class="text-2xl font-black mb-2 text-center">בחרו שפת קלפים</h2>
+    <p class="text-slate-400 text-sm mb-10 text-center">Choose your deck language</p>
+
+    <div class="grid grid-cols-2 gap-4 w-full max-w-xs">
+      <button onclick="selectLanguage('he')"
+        class="bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl p-6 text-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <div class="text-4xl mb-3">🇮🇱</div>
+        <div class="font-bold text-lg">עברית</div>
+        <div class="text-xs text-slate-400 mt-1">Hebrew</div>
+      </button>
+      <button onclick="selectLanguage('en')"
+        class="bg-white/10 hover:bg-white/20 border border-white/20 rounded-2xl p-6 text-center transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <div class="text-4xl mb-3">🇺🇸</div>
+        <div class="font-bold text-lg">English</div>
+        <div class="text-xs text-slate-400 mt-1">אנגלית</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       MAIN APP
+  ════════════════════════════════════════════ -->
+  <div id="main-app" class="hidden flex-col" style="height: 100dvh; display: none;">
+
+    <!-- TOP BAR -->
+    <header class="bg-slate-900 border-b border-white/10 px-4 h-14 flex items-center justify-between flex-shrink-0">
+      <div class="flex items-center gap-2">
+        <img src="icon.svg" alt="" class="w-8 h-8 rounded-lg flex-shrink-0" draggable="false">
+        <span id="top-title" class="font-bold text-sm">Change Navigator</span>
+      </div>
+      <button onclick="showLangScreen()" id="lang-badge"
+        class="text-xs text-slate-300 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition-colors border border-white/10">
+      </button>
+    </header>
+
+    <!-- TAB CONTENT -->
+    <main id="content-area" class="flex-1">
+
+      <!-- ── DRAW TAB ──────────────────────────── -->
+      <section id="tab-draw" class="tab-panel p-4 flex flex-col items-center">
+        <div class="w-full max-w-xs mx-auto flex flex-col items-center gap-5 py-2">
+
+          <!-- Card 3D flip display — 2:3 aspect ratio (750×1125 source) -->
+          <div class="card-3d card-display">
+            <div id="draw-card-inner" class="card-inner w-full h-full">
+              <!-- Front -->
+              <div class="card-face rounded-3xl overflow-hidden shadow-2xl cursor-pointer select-none"
+                   onclick="flipDrawCard()">
+                <img id="draw-img-front" src="" alt="Card Front"
+                     class="w-full h-full object-cover"
+                     draggable="false"
+                     onerror="this.src='https://placehold.co/400x600/1e293b/60a5fa?text=Card+Front'">
+                <div class="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+                  <span id="draw-flip-hint-front" class="bg-black/50 text-white/80 text-xs px-3 py-1 rounded-full backdrop-blur-sm">הקש להפוך ↺</span>
+                </div>
+              </div>
+              <!-- Back -->
+              <div class="card-face card-face-back rounded-3xl overflow-hidden shadow-2xl cursor-pointer select-none"
+                   onclick="flipDrawCard()">
+                <img id="draw-img-back" src="" alt="Card Back"
+                     class="w-full h-full object-cover"
+                     draggable="false"
+                     onerror="this.src='https://placehold.co/400x600/1e293b/60a5fa?text=Card+Back'">
+                <div class="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+                  <span id="draw-flip-hint-back" class="bg-black/50 text-white/80 text-xs px-3 py-1 rounded-full backdrop-blur-sm">הקש להפוך ↺</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card number -->
+          <p class="text-slate-500 text-sm"><span id="draw-card-label">קלף</span> <span id="draw-card-num">#1</span></p>
+
+          <!-- Action row -->
+          <div class="flex gap-3 w-full">
+            <button onclick="toggleFavDraw()" id="draw-fav-btn"
+              class="flex-1 bg-white/10 hover:bg-white/20 border border-white/10 rounded-2xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm font-bold">
+              <span id="fav-icon" class="text-lg leading-none">☆</span>
+              <span id="fav-label">שמור</span>
+            </button>
+            <button onclick="openEmailFromDraw()"
+              class="flex-1 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/30 rounded-2xl py-3 flex items-center justify-center gap-2 transition-all active:scale-95 text-sm font-bold text-blue-300">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect width="20" height="16" x="2" y="4" rx="2"/>
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <span id="draw-email-btn-text">שלח במייל</span>
+            </button>
+          </div>
+
+          <!-- Draw new card -->
+          <button id="draw-new-btn" onclick="drawNewCard()"
+            class="w-full bg-slate-700 hover:bg-slate-600 active:bg-slate-800 rounded-2xl py-4 font-bold text-base transition-all active:scale-[0.98] border border-white/10">
+            משוך קלף חדש
+          </button>
+        </div>
+      </section>
+
+      <!-- ── BROWSE TAB ─────────────────────────── -->
+      <section id="tab-browse" class="tab-panel hidden p-4">
+        <div id="browse-grid" class="grid grid-cols-3 gap-2.5">
+          <!-- filled by renderBrowse() -->
+        </div>
+      </section>
+
+      <!-- ── FAVORITES TAB ─────────────────────── -->
+      <section id="tab-favs" class="tab-panel hidden p-4">
+        <div id="favs-grid" class="grid grid-cols-3 gap-2.5">
+          <!-- filled by renderFavs() -->
+        </div>
+      </section>
+
+      <!-- ── JOURNAL TAB ───────────────────────── -->
+      <section id="tab-journal" class="tab-panel hidden p-4">
+        <div id="journal-list" class="space-y-3">
+          <!-- filled by renderJournal() -->
+        </div>
+      </section>
+    </main>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav id="bottom-nav" class="bg-slate-900 border-t border-white/10 flex items-start pt-2 flex-shrink-0">
+      <button data-tab="draw" onclick="switchTab('draw')" class="nav-btn active flex-1 flex flex-col items-center gap-1 py-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+        </svg>
+        <span id="nav-label-draw" class="text-[10px] font-bold">קלף יומי</span>
+      </button>
+      <button data-tab="browse" onclick="switchTab('browse')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        <span id="nav-label-browse" class="text-[10px] font-bold">כל הקלפים</span>
+      </button>
+      <button data-tab="favs" onclick="switchTab('favs')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+        <span id="nav-label-favs" class="text-[10px] font-bold">מועדפים</span>
+      </button>
+      <button data-tab="journal" onclick="switchTab('journal')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+        <span id="nav-label-journal" class="text-[10px] font-bold">יומן</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       CARD MODAL
+  ════════════════════════════════════════════ -->
+  <div id="card-modal" class="hidden fixed inset-0 modal-backdrop z-40 flex flex-col overflow-y-auto">
+    <div class="min-h-full flex flex-col p-4 max-w-sm mx-auto w-full gap-4 py-6">
+
+      <!-- Header row -->
+      <div class="flex justify-between items-center">
+        <button onclick="closeCardModal()"
+          class="bg-white/10 hover:bg-white/20 rounded-full p-2.5 transition-all active:scale-95">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+        <span id="modal-card-num" class="text-slate-400 text-sm font-bold"></span>
+        <button onclick="toggleFavModal()" id="modal-fav-btn"
+          class="bg-white/10 hover:bg-white/20 rounded-full w-10 h-10 flex items-center justify-center text-xl transition-all active:scale-95">
+          ☆
+        </button>
+      </div>
+
+      <!-- Card flip — 2:3 aspect ratio (750×1125 source) -->
+      <div class="card-3d card-display">
+        <div id="modal-card-inner" class="card-inner w-full h-full">
+          <div class="card-face rounded-2xl overflow-hidden shadow-xl cursor-pointer select-none"
+               onclick="flipModalCard()">
+            <img id="modal-img-front" src="" alt="Card Front"
+                 class="w-full h-full object-cover"
+                 draggable="false"
+                 onerror="this.src='https://placehold.co/400x600/1e293b/60a5fa?text=Card+Front'">
+            <div class="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+              <span id="modal-flip-hint-front" class="bg-black/50 text-white/70 text-xs px-3 py-1 rounded-full backdrop-blur-sm">הקש להפוך ↺</span>
+            </div>
+          </div>
+          <div class="card-face card-face-back rounded-2xl overflow-hidden shadow-xl cursor-pointer select-none"
+               onclick="flipModalCard()">
+            <img id="modal-img-back" src="" alt="Card Back"
+                 class="w-full h-full object-cover"
+                 draggable="false"
+                 onerror="this.src='https://placehold.co/400x600/1e293b/60a5fa?text=Card+Back'">
+            <div class="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+              <span id="modal-flip-hint-back" class="bg-black/50 text-white/70 text-xs px-3 py-1 rounded-full backdrop-blur-sm">הקש להפוך ↺</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Journal textarea -->
+      <div class="bg-white/5 rounded-2xl p-4 border border-white/10">
+        <label id="modal-notes-label" class="text-[11px] text-slate-400 font-bold uppercase tracking-widest">ההרשמות שלי</label>
+        <textarea id="modal-note"
+          placeholder="כתבו כאן את ההשראה שלכם..."
+          class="w-full bg-transparent text-white placeholder-slate-600 text-sm mt-2 resize-none outline-none min-h-[96px] leading-relaxed"
+          oninput="scheduleNoteSave()"></textarea>
+      </div>
+
+      <!-- Email CTA -->
+      <button onclick="openEmailModal()"
+        class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 rounded-2xl py-4 font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+        </svg>
+        <span id="modal-email-btn-text">שלח קלף זה במייל</span>
+      </button>
+
+      <div class="h-2"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       OFFLINE PREFETCH STATUS BAR
+  ════════════════════════════════════════════ -->
+  <div id="offline-bar" class="hidden fixed bottom-20 inset-x-0 flex justify-center pointer-events-none z-30">
+    <div id="offline-msg" class="bg-slate-800/95 border border-white/10 rounded-full px-4 py-2 text-xs font-bold shadow-xl text-slate-200"></div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       EMAIL MODAL
+  ════════════════════════════════════════════ -->
+  <div id="email-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-5">
+    <div class="bg-slate-800 rounded-3xl p-6 w-full max-w-sm border border-white/10 shadow-2xl space-y-4">
+
+      <!-- Header -->
+      <div class="flex justify-between items-center">
+        <h3 id="email-modal-title" class="text-lg font-black">שלח קלף במייל</h3>
+        <button onclick="closeEmailModal()"
+          class="bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all active:scale-95">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Card thumbnail -->
+      <div class="rounded-2xl overflow-hidden bg-slate-700" style="height: 160px;">
+        <img id="email-thumb" src="" alt="Card" class="w-full h-full object-cover" draggable="false">
+      </div>
+
+      <!-- Free-text inspiration box (editable) -->
+      <div class="bg-white/5 rounded-xl p-3 border border-white/10">
+        <label id="email-inspr-label" class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">השראה / הרשמות</label>
+        <textarea id="email-free-text"
+          placeholder="כתבו כאן את ההשראה שלכם..."
+          class="w-full bg-transparent text-white placeholder-slate-600 text-sm mt-2 resize-none outline-none min-h-[72px] leading-relaxed"
+          dir="auto"></textarea>
+      </div>
+
+      <!-- Email input -->
+      <div>
+        <label id="email-addr-label" class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">כתובת מייל</label>
+        <input type="email" id="email-input" placeholder="you@example.com" dir="ltr"
+          class="w-full mt-2 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-slate-500 outline-none focus:border-blue-400 transition-colors text-sm">
+      </div>
+
+      <!-- Send button -->
+      <button onclick="sendEmail()" id="send-btn"
+        class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 rounded-2xl py-4 font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        <span id="send-btn-text">שלח עכשיו</span>
+      </button>
+
+      <p id="email-status" class="text-center text-sm hidden"></p>
+    </div>
+  </div>
+
+  <script>
+    // ════════════════════════════════════════════
+    // EMAILJS CONFIGURATION
+    // Fill in your Service ID and Template ID from https://dashboard.emailjs.com
+    //
+    // Required EmailJS template variables:
+    //   {{to_email}}       — recipient email address
+    //   {{card_number}}    — card number (e.g. "12")
+    //   {{card_image_url}} — direct URL of the card image
+    //   {{user_note}}      — journal text written by user
+    //   {{language}}       — "עברית" or "English"
+    // ════════════════════════════════════════════
+    const EMAILJS_PUBLIC_KEY  = 'nxguxr-WfLhUpXOhn';
+    const EMAILJS_SERVICE_ID  = localStorage.getItem('cnav_emailjs_service')  || 'service_a85ap2g';
+    const EMAILJS_TEMPLATE_ID = localStorage.getItem('cnav_emailjs_template') || 'template_xquxnon';
+
+    // ════════════════════════════════════════════
+    // HEBREW CARD CONTENT DATA
+    // ════════════════════════════════════════════
+    const CARD_DATA_HE = {
+      1:  { category: 'מנהיגות', quote: 'מנהיג טוב יודע לאן הוא הולך; מנהיג גדול יודע לקחת אחרים איתו.', explanation: 'כמנהל, אתה לא רק קובע כיוון — אתה יוצר בהירות ומשמעות עבור הצוות שלך. שאל את עצמך: האם אנשיי יודעים לאן אנחנו הולכים ומדוע?' },
+      2:  { category: 'מנהיגות', quote: 'השפעה אמיתית נבנית על אמון, לא על סמכות.', explanation: 'ניהול מבוסס פחד יוצר ציות; ניהול מבוסס אמון יוצר מחויבות. בנה אמון דרך עקביות, שקיפות ועמידה בהתחייבויות קטנות.' },
+      3:  { category: 'מנהיגות', quote: 'מנהיגות היא האמנות של לגרום לאנשים לרצות לעשות מה שצריך לעשות.', explanation: 'ההבדל בין ניהול למנהיגות הוא המוטיבציה הפנימית. שאל: איך אני יוצר סביבה שבה אנשים רוצים לתרום, לא רק חייבים?' },
+      4:  { category: 'מנהיגות', quote: 'הדרך הטובה ביותר לחזות את העתיד היא ליצור אותו.', explanation: 'מנהלים פרואקטיביים לא מחכים לתנאים מושלמים — הם יוצרים אותם. אילו צעדים קטנים תוכל לנקוט היום כדי לעצב את המחר?' },
+      5:  { category: 'מנהיגות', quote: 'אל תנהל אנשים. נהל הסכמות והסר מחסומים.', explanation: 'תפקידך כמנהל אינו לשלוט בכל פרט אלא להסכים על יעדים ולפנות את הדרך. מה המחסום הגדול ביותר שמונע מהצוות שלך להצליח?' },
+      6:  { category: 'מנהיגות', quote: 'מנהיג שלא מאזין — בסופו של דבר יוקף באנשים שאין להם מה לומר.', explanation: 'הקשבה אקטיבית היא מיומנות ניהולית קריטית. כשאתה מאזין לצוותך, אתה לא רק אוסף מידע — אתה בונה תרבות שבה כולם מרגישים ששווה לתרום.' },
+      7:  { category: 'מנהיגות', quote: 'עוצמה אמיתית היא לא כמה אנשים נשמעים לך, אלא כמה אנשים נעזרים בך.', explanation: 'שאל את עצמך: מה האנשים שלי לומדים ממני? כיצד אני תורם לצמיחתם האישית והמקצועית?' },
+      8:  { category: 'מנהיגות', quote: 'המנהיג הטוב ביותר הוא זה שאינו נוכח — ובכל זאת הדברים מתנהלים מעצמם.', explanation: 'הצלחת ניהולית אמיתית היא כאשר הצוות שלך מסוגל לפעול ולהחליט באופן עצמאי. האם אתה בונה מערכות ומיומנויות שיאפשרו את זה?' },
+      9:  { category: 'מנהיגות', quote: 'אל תפחד לוותר על הטוב לטובת הגדול.', explanation: 'לעיתים, ההצלחות הנוכחיות שלנו הן המחסום לפריצות דרך עתידיות. מה אתה מחזיק בו בגלל נוחות שמונע ממך לצמוח?' },
+      10: { category: 'מנהיגות', quote: 'בניית צוות מנצח מתחילה בבניית אמון אמיתי.', explanation: 'אמון בצוות אינו נוצר בן-לילה — הוא נבנה ממאות אינטראקציות קטנות. האם ההתנהגות היומיומית שלך בונה או שוחקת אמון?' },
+      11: { category: 'עבודת צוות', quote: 'לבד אנחנו יכולים לעשות כל כך מעט; יחד אנחנו יכולים לעשות כל כך הרבה.', explanation: 'הכוח האמיתי של צוות הוא בסינרגיה — שהתוצאה גדולה מסכום חלקיה. כיצד אתה יוצר תנאים שבהם אנשים עובדים יחד ולא רק זה לצד זה?' },
+      12: { category: 'עבודת צוות', quote: 'הפרט עוקף שיאים; הצוות יוצר מורשת.', explanation: 'הישגים פרטניים מרשימים, אך מורשת ארגונית נבנית על שיתוף פעולה. כיצד אתה מאזן בין עידוד מצוינות אישית לבין חיזוק שיתוף פעולה?' },
+      13: { category: 'עבודת צוות', quote: 'צוות חזק אינו זקוק לכוכבים — הוא זקוק לאנשים שמשחקים יחד.', explanation: 'כישרון אינדיבידואלי חשוב, אבל כימיה צוותית חשובה לא פחות. כיצד אתה בונה תרבות שבה שיתוף פעולה מוערך לפחות כמו ביצועים אישיים?' },
+      14: { category: 'עבודת צוות', quote: 'ניתן ללכת מהר לבד; ניתן ללכת רחוק יחד.', explanation: 'מהירות לעיתים מפתה אותנו לפעול לבד, אבל לטווח הארוך — השקעה בצוות מניבה תוצאות גדולות בהרבה. מה הפשרות שאתה עושה כרגע בין מהירות לשיתוף פעולה?' },
+      15: { category: 'עבודת צוות', quote: 'לא משנה כמה אתה מוכשר — אתה לא יכול לנגן סימפוניה לבד.', explanation: 'כמנהל, עבודתך היא לנצח על התזמורת, לא לנגן בכל הכלים. האם אתה סומך על חברי הצוות שלך לנגן את תפקידיהם, או שאתה מנסה לשלוט בכל פרט?' },
+      16: { category: 'עבודת צוות', quote: 'גיוון בדעות הוא נכס צוותי — אם יש מנהל שמקשיב.', explanation: 'צוות הומוגני מרגיש נוח אך מפספס נקודות מבט קריטיות. כיצד אתה יוצר מרחב שבו דעות שונות ואף מנוגדות מוזמנות ומוערכות?' },
+      17: { category: 'עבודת צוות', quote: 'שיתוף הצלחות מכפיל אותן; שיתוף כישלונות מחצין אותם.', explanation: 'תרבות שבה מדברים בפתיחות על הצלחות וכישלונות מאפשרת למידה ושיפור מתמיד. כיצד אתה מייצר מרחב בטוח לשיח כזה בצוות שלך?' },
+      18: { category: 'עבודת צוות', quote: 'הצוות הטוב ביותר הוא זה שמצליח גם בהיעדר המנהל.', explanation: 'בנה צוות כל כך טוב שלא יצטרך אותך לכל החלטה. זה לא מחליש אותך — זה מראה על מנהיגות ממשית. מה עליך להאציל היום?' },
+      19: { category: 'עבודת צוות', quote: 'כאשר כולם מתקדמים יחד, ההצלחה תגיע מעצמה.', explanation: 'יישור ציפיות ומטרות משותפות הוא מפתח לביצועי צוות גבוהים. האם כל אחד בצוותך מבין כיצד תפקידו תורם לתמונה הגדולה?' },
+      20: { category: 'עבודת צוות', quote: 'שתי מוחות טובים יותר מאחד — אם שניהם מוכנים לשמוע זה את זה.', explanation: 'ניהול דיאלוג אמיתי בין חברי צוות הוא מיומנות. איך אתה מוודא שדיונים בצוות שלך הם שיחות אמיתיות ולא מונולוגים מקבילים?' },
+      21: { category: 'עבודת צוות', quote: 'הצוות ניזון מהאנרגיה של מנהיגו — בחר בזהירות איזו אנרגיה אתה מביא.', explanation: 'מצב רוחך ורמת האנרגיה שלך כמנהל משפיעים על כל הצוות. כיצד אתה מנהל את האנרגיה שלך, ואיזה טון אתה מציב בפגישות ובאינטראקציות יומיומיות?' },
+      22: { category: 'פיתוח מקצועי', quote: 'המשקיע הטוב ביותר הוא זה שמשקיע בעצמו.', explanation: 'פיתוח עצמי אינו מותרות — הוא חלק מהעבודה. כמנהל, כאשר אתה גדל, הצוות שלך גדל איתך. מה הכישור שאתה עובד עליו עכשיו?' },
+      23: { category: 'פיתוח מקצועי', quote: 'אל תהיה המכשול לצמיחת עצמך.', explanation: 'לעיתים, אנחנו עצמנו המגבילים את הפוטנציאל שלנו — דרך אמונות מגבילות, פחד מכישלון או נוחות. אילו מחסומים פנימיים אתה מזהה בעצמך?' },
+      24: { category: 'פיתוח מקצועי', quote: 'כישורים ניתנים לפיתוח; עמדות ניתנות לבחירה.', explanation: 'בעוד שכישורים טכניים ניתנים ללמידה, עמדה חיובית ומחויבות לצמיחה הן בחירה יומיומית. איזו עמדה אתה בוחר להביא לעבודה?' },
+      25: { category: 'פיתוח מקצועי', quote: 'הצמיחה המקצועית מתחילה בשאלה: "מה עוד אני יכול ללמוד?"', explanation: 'מנהלים הכי יעילים שומרים על ענווה אינטלקטואלית — תמיד מוכנים ללמוד, גם מאנשים ונסיבות בלתי צפויות. מתי לאחרונה שאלת שאלה שלא ידעת את תשובתה?' },
+      26: { category: 'פיתוח מקצועי', quote: 'כישלון הוא שכר לימוד שכבר שילמת — ודא שאתה לוקח את המידע.', explanation: 'כשלונות הם בלתי נמנעים בניהול. השאלה אינה אם תיפול, אלא מה תלמד. האם יש לך תהליך מובנה ללמידה מטעויות?' },
+      27: { category: 'פיתוח מקצועי', quote: 'מנהל שפסק ללמוד — פסק להוביל.', explanation: 'בעולם המשתנה במהירות, עדכניות מקצועית היא הישרדות ארגונית. כיצד אתה שומר על עצמך מעודכן ורלוונטי בתחום שלך?' },
+      28: { category: 'פיתוח מקצועי', quote: 'אין קיצורי דרך לבניית מצוינות — רק תרגול עקבי ומכוון.', explanation: 'מיומנויות ניהוליות מתפתחות דרך תרגול מכוון עם משוב. האם אתה מקבל ונותן משוב באופן שיטתי שמוביל לשיפור אמיתי?' },
+      29: { category: 'פיתוח מקצועי', quote: 'הדרך הטובה ביותר ללמוד היא ללמד.', explanation: 'כאשר אתה מדריך ומנטור אחרים, אתה מעמיק את הידע שלך. מי בצוותך יכול להרוויח ממנטורינג שלך, ומה תלמד בתהליך?' },
+      30: { category: 'פיתוח מקצועי', quote: 'השקע בידע — זו ההשקעה שמניבה את הריבית הטובה ביותר.', explanation: 'זמן שמוקדש ללמידה הוא השקעה שמניבה דיבידנדים לאורך הקריירה כולה. כיצד אתה מתעדף זמן ללמידה ופיתוח בלוח הזמנים הצפוף שלך?' },
+      31: { category: 'פיתוח מקצועי', quote: 'פיתוח אחרים הוא הדרך הטובה ביותר לפתח את עצמך.', explanation: 'מנהלים שמפתחים את אנשיהם מגלים שהם עצמם צומחים בתהליך. מי מצוות שלך נמצא בצומת קריירה שבו הכוונה שלך יכולה לחולל שינוי?' },
+      32: { category: 'קבלת החלטות', quote: 'החלטה טובה היום עדיפה על החלטה מושלמת מחר.', explanation: 'שיתוק מניתוח יתר הוא מלכודת ניהולית נפוצה. ברוב המקרים, החלטה בזמן עם מידע חלקי עדיפה על המתנה לוודאות מלאה שלעולם לא תגיע.' },
+      33: { category: 'קבלת החלטות', quote: 'מי שמפחד לטעות — לעולם לא יחליט נכון.', explanation: 'היכולת לסבול אי-ודאות ולקחת אחריות על תוצאות היא ליבת הקבלת החלטות ניהולית. כיצד אתה מייצר ביטחון פסיכולוגי שמאפשר לך ולצוותך לקחת סיכונים מחושבים?' },
+      34: { category: 'קבלת החלטות', quote: 'כל החלטה היא גם ויתור — בחר בחוכמה ממה אתה מוכן לוותר.', explanation: 'כל בחירה באפשרות אחת היא ויתור על אחרת. הכרה מפורשת בוויתורים שבכל החלטה מסייעת לקבל החלטות מושכלות יותר ולנהל ציפיות.' },
+      35: { category: 'קבלת החלטות', quote: 'נתונים מספרים את הסיפור של מה שהיה; שיקול דעת מנהיגותי מגדיר מה יהיה.', explanation: 'נתונים הם כלי עזר, לא תחליף לשיקול דעת. מנהלים אפקטיביים משתמשים בנתונים כדי להבין את ההקשר, ואז מפעילים שיקול דעת כדי לקבל החלטות.' },
+      36: { category: 'קבלת החלטות', quote: 'ההחלטה הכי גרועה היא לא להחליט.', explanation: 'אי-פעולה היא גם החלטה, ולרוב עם תוצאות גרועות יותר מהחלטה אקטיבית עם סיכון. מה ההחלטה שאתה דוחה שמשפיעה על הצוות שלך?' },
+      37: { category: 'קבלת החלטות', quote: 'שאל את עצמך: "האם ההחלטה הזו תשרת את הייעוד שלי?"', explanation: 'יישור החלטות עם מטרה ארגונית ברורה מפשט בחירות מורכבות. האם יש לך מסגרת ברורה של ערכים ומטרות שמדריכה את ההחלטות שלך?' },
+      38: { category: 'קבלת החלטות', quote: 'ייעוץ רב — החלטה אחת. אספו דעות, אבל היו הבעלים של הבחירה.', explanation: 'שיתוף אחרים בקבלת החלטות מגביר איכות ומחויבות, אבל הבעלות הסופית חייבת להיות ברורה. כיצד אתה מאזן בין ייעוץ ושיתוף לבין אחריות אישית?' },
+      39: { category: 'קבלת החלטות', quote: 'לפני שאתה מחליט מה לעשות — החלט מה לא לעשות.', explanation: 'חיסול אפשרויות לפני קבלת החלטה מסייע בהתמקדות. מה אתה ממשיך לעשות מכוח האינרציה שכדאי להפסיק?' },
+      40: { category: 'קבלת החלטות', quote: 'החכמה האמיתית היא לדעת מתי להמשיך ומתי לשנות כיוון.', explanation: 'ניהול דורש גמישות אסטרטגית — לדעת מתי לדבוק בתוכנית ומתי לסטות ממנה. מה הסימנים שיגידו לך שהגיע הזמן לשנות גישה?' },
+      41: { category: 'קבלת החלטות', quote: 'קבל החלטות שתוכל להסביר — לעצמך ולאחרים.', explanation: 'יכולת להסביר את ההיגיון מאחורי החלטות בונה אמון ומאפשרת למידה ארגונית. האם תהליך קבלת ההחלטות שלך שקוף ומובן לצוותך?' },
+      42: { category: 'שינוי ואי-ודאות', quote: 'השינוי אינו האויב — ההתנגדות לשינוי היא.', explanation: 'בעידן של שינוי מתמיד, המנהלים המצליחים הם אלו שמפתחים אגילות — יכולת להסתגל מהר תוך שמירה על כיוון אסטרטגי. כיצד אתה מטפח תרבות של גמישות?' },
+      43: { category: 'שינוי ואי-ודאות', quote: 'בתוך כל אי-ודאות מסתתרת הזדמנות — אם יש לך מנהיג שיודע לחפש אותה.', explanation: 'תקופות של אי-ודאות יוצרות הזדמנויות לחדשנות ולשיפור. כמנהל, כיצד אתה מכוון את הצוות לראות הזדמנויות במקום רק איומים?' },
+      44: { category: 'שינוי ואי-ודאות', quote: 'ניהול שינוי מצליח מתחיל בניהול הפחדים שלו.', explanation: 'שינוי מלווה בפחד — זה טבעי. מנהלים אפקטיביים מכירים בפחדים (שלהם ושל הצוות), מדברים עליהם בפתיחות, ויוצרים מרחב בטוח לתהליך.' },
+      45: { category: 'שינוי ואי-ודאות', quote: 'אל תנסה לשלוט בשינוי — נסה לנווט אותו.', explanation: 'אשליית שליטה מלאה על תהליכי שינוי היא מלכודת. מנהלים אפקטיביים מתמקדים במה שניתן להשפיע עליו, תוך קבלה אמיצה של מה שאי-אפשר לשלוט בו.' },
+      46: { category: 'שינוי ואי-ודאות', quote: 'הנוחות היא המכשול הגדול ביותר לחדשנות.', explanation: 'ארגונים ואנשים נוטים להישאר בתחום הנוח — עד שנכפה עליהם לשנות. כיצד אתה מאתגר את הצוות שלך לצאת מאזור הנוחות בצורה בטוחה ומבוקרת?' },
+      47: { category: 'שינוי ואי-ודאות', quote: 'שינוי ללא כיוון הוא כאוס; כיוון ללא שינוי הוא קיפאון.', explanation: 'ניהול שינוי אפקטיבי מחייב גם ראייה ברורה של יעד וגם נכונות לשנות את הדרך. כיצד אתה שומר על ה"למה" קבוע תוך שאתה גמיש ב"איך"?' },
+      48: { category: 'שינוי ואי-ודאות', quote: 'מנהיג בזמן משבר מוכח לפי האופן שבו הוא מנהל את עצמו.', explanation: 'בתקופות לחץ, האנשים שלך מסתכלים עליך כדי לקרוא את המצב. הרגיעה, הבהירות והיושרה שלך בזמני משבר קובעים את תגובת הצוות.' },
+      49: { category: 'שינוי ואי-ודאות', quote: 'שינוי מוצלח מחייב את לב האנשים, לא רק את ראשם.', explanation: 'שינויים ארגוניים נכשלים לעיתים קרובות לא בגלל כשל לוגי אלא בגלל התנגדות רגשית. כיצד אתה פונה לממד הרגשי של שינוי בתוך הצוות שלך?' },
+      50: { category: 'שינוי ואי-ודאות', quote: 'אי-ודאות היא מצב; כיצד תגיב לה — זו בחירה.', explanation: 'איננו שולטים בנסיבות, אבל אנחנו שולטים בתגובה שלנו. כיצד אתה בוחר להגיב לאי-ודאות בצורה שמחזקת את הצוות שלך במקום להחליש אותו?' },
+      51: { category: 'שינוי ואי-ודאות', quote: 'מנהל שמצליח לשמור על ביטחון עצמי גם בשינוי — הוא עוגן לצוות.', explanation: 'ביטחון עצמי ניהולי בזמן אי-ודאות אינו אומר שיש לך את כל התשובות — אלא שאתה בטוח ביכולתך להתמודד עם האתגרים. כיצד אתה מפגין ביטחון עצמי אמיתי?' },
+      52: { category: 'שינוי ואי-ודאות', quote: 'כל משבר הוא הזמנה לחשוב אחרת.', explanation: 'משברים מאלצים אותנו לשאול שאלות שלא שאלנו בזמנים רגילים. מה המשבר הנוכחי שלך מאפשר לך לחשוב עליו מחדש?' },
+      53: { category: 'שינוי ואי-ודאות', quote: 'הדרך לחצות את הסערה היא לא לחכות שתיפסק — אלא ללמוד לרקוד בגשם.', explanation: 'חמישות ניהולית — היכולת לפעול ביעילות תוך כדי שינוי ואי-ודאות — היא מיומנות שניתן לפתח. כיצד אתה מחפש הזדמנויות לפעול ביעילות גם כאשר התנאים אינם אידיאליים?' },
+      54: { category: 'שינוי ואי-ודאות', quote: 'שינוי הוא לא תחנת הסיום — הוא כלי הנסיעה.', explanation: 'ארגונים שמצליחים לאורך זמן רואים שינוי לא כאירוע חד-פעמי אלא כיכולת מתמשכת. כיצד אתה בונה ארגון שמסוגל לשינוי מתמיד כחלק מה-DNA שלו?' },
+    };
+
+    // ════════════════════════════════════════════
+    // UI TRANSLATIONS
+    // All user-visible strings keyed by language code so switching
+    // language ('he' / 'en') updates every label, button, and placeholder.
+    // ════════════════════════════════════════════
+    const UI = {
+      he: {
+        flipHint:          'הקש להפוך ↺',
+        cardLabel:         'קלף',
+        favSave:           'שמור',
+        favSaved:          'במועדפים',
+        drawEmailBtn:      'שלח במייל',
+        drawNewCard:       'משוך קלף חדש',
+        navDraw:           'קלף יומי',
+        navBrowse:         'כל הקלפים',
+        navFavs:           'מועדפים',
+        navJournal:        'יומן',
+        tabBrowse:         'כל הקלפים',
+        tabFavs:           'מועדפים',
+        tabJournal:        'יומן',
+        myNotes:           'ההרשמות שלי',
+        notePlaceholder:   'כתבו כאן את ההשראה שלכם...',
+        modalEmailBtn:     'שלח קלף זה במייל',
+        emailModalTitle:   'שלח קלף במייל',
+        inspirLabel:       'השראה / הרשמות',
+        inspirPlaceholder: 'כתבו כאן את ההשראה שלכם...',
+        emailLabel:        'כתובת מייל',
+        sendNow:           'שלח עכשיו',
+        sending:           'שולח...',
+        sent:              'נשלח!',
+        emailSuccess:      '✓ המייל נשלח בהצלחה!',
+        emailError:        'שגיאה בשליחה — בדקו את הגדרות EmailJS',
+        favsEmpty:         'לא שמרת קלפים עדיין',
+        favsEmptyHint:     'לחץ ☆ בקלף כדי לשמור',
+        journalEmpty:      'אין רשומות יומן עדיין',
+        journalEmptyHint:  'פתח קלף וכתוב הרשמות',
+        cardNumLabel:      n => `קלף #${n}`,
+        offlineProgress:   p => `⬇ מוריד קלפים לשימוש ללא חיבור... ${p}%`,
+        offlineDone:       '✓ כל הקלפים מוכנים לשימוש ללא חיבור',
+        dateLocale:        'he-IL',
+      },
+      en: {
+        flipHint:          'Tap to flip ↺',
+        cardLabel:         'Card',
+        favSave:           'Save',
+        favSaved:          'Saved',
+        drawEmailBtn:      'Send Email',
+        drawNewCard:       'Draw New Card',
+        navDraw:           'Daily Card',
+        navBrowse:         'All Cards',
+        navFavs:           'Favorites',
+        navJournal:        'Journal',
+        tabBrowse:         'All Cards',
+        tabFavs:           'Favorites',
+        tabJournal:        'Journal',
+        myNotes:           'My Notes',
+        notePlaceholder:   'Write your insights here...',
+        modalEmailBtn:     'Send This Card by Email',
+        emailModalTitle:   'Send Card by Email',
+        inspirLabel:       'Inspiration / Notes',
+        inspirPlaceholder: 'Write your insights here...',
+        emailLabel:        'Email Address',
+        sendNow:           'Send Now',
+        sending:           'Sending...',
+        sent:              'Sent!',
+        emailSuccess:      '✓ Email sent successfully!',
+        emailError:        'Send error — check your EmailJS settings',
+        favsEmpty:         'No saved cards yet',
+        favsEmptyHint:     'Tap ☆ on a card to save it',
+        journalEmpty:      'No journal entries yet',
+        journalEmptyHint:  'Open a card and write your notes',
+        cardNumLabel:      n => `Card #${n}`,
+        offlineProgress:   p => `⬇ Downloading cards for offline use... ${p}%`,
+        offlineDone:       '✓ All cards ready for offline use',
+        dateLocale:        'en-US',
+      },
+    };
+
+    // ════════════════════════════════════════════
+    // STATE
+    // ════════════════════════════════════════════
+    const state = {
+      lang: localStorage.getItem('cnav_lang'),
+      currentCard: null,   // { num, imgFront, imgBack }
+      modalCard: null,
+      modalFlipped: false,
+      drawFlipped: false,
+    };
+
+    const CARD_NUMBERS = Array.from({ length: 54 }, (_, i) => i + 1);
+
+    // ════════════════════════════════════════════
+    // INDEXEDDB — LOCAL IMAGE CACHE
+    // Images uploaded via admin.html are stored here and take priority
+    // ════════════════════════════════════════════
+    const localImageCache = new Map(); // "he_1_front" → data-URL
+
+    function openImageDB() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open('cnav-images', 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('card-images');
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    async function loadLocalImages() {
+      const db = await openImageDB();
+      return new Promise((res, rej) => {
+        const tx     = db.transaction('card-images', 'readonly');
+        const store  = tx.objectStore('card-images');
+        const cursor = store.openCursor();
+        cursor.onsuccess = e => {
+          const c = e.target.result;
+          if (c) { localImageCache.set(c.key, c.value); c.continue(); }
+          else res();
+        };
+        cursor.onerror = e => rej(e.target.error);
+      });
+    }
+
+    // ════════════════════════════════════════════
+    // IMAGE URL BUILDER
+    // Priority: local IndexedDB → Supabase Storage → placeholder
+    // ════════════════════════════════════════════
+    function getImageUrl(lang, num, side) {
+      const localKey = `${lang}_${num}_${side}`;
+      if (localImageCache.has(localKey)) return localImageCache.get(localKey);
+
+      const sideCode = side === 'front' ? 'F' : 'B';
+
+      if (window.SUPABASE_STORAGE_BASE && !window.SUPABASE_URL.includes('YOUR_PROJECT_REF')) {
+        const bucket = CARD_CONFIG.buckets[lang];
+        return `${SUPABASE_STORAGE_BASE}/${bucket}/${num}${sideCode}.png`;
+      }
+
+      return `https://placehold.co/400x600/1e293b/60a5fa?text=${lang.toUpperCase()}+${num}${sideCode}`;
+    }
+
+    // ════════════════════════════════════════════
+    // PERSISTENCE HELPERS
+    // ════════════════════════════════════════════
+    function getFavorites() {
+      return JSON.parse(localStorage.getItem('cnav_favorites') || '[]');
+    }
+    function isFavorite(num) { return getFavorites().includes(num); }
+    function toggleFavorite(num) {
+      const favs = getFavorites();
+      const idx = favs.indexOf(num);
+      if (idx === -1) favs.push(num); else favs.splice(idx, 1);
+      localStorage.setItem('cnav_favorites', JSON.stringify(favs));
+    }
+
+    function getJournal() {
+      return JSON.parse(localStorage.getItem('cnav_journal') || '{}');
+    }
+    function getNote(num) { return getJournal()[String(num)]?.text || ''; }
+    function saveNote(num, text) {
+      const journal = getJournal();
+      if (text.trim()) {
+        journal[String(num)] = { text, updatedAt: new Date().toISOString() };
+      } else {
+        delete journal[String(num)];
+      }
+      localStorage.setItem('cnav_journal', JSON.stringify(journal));
+    }
+
+    let noteSaveTimer = null;
+    function scheduleNoteSave() {
+      clearTimeout(noteSaveTimer);
+      noteSaveTimer = setTimeout(() => {
+        if (state.modalCard) {
+          saveNote(state.modalCard.num, document.getElementById('modal-note').value);
+        }
+      }, 800);
+    }
+
+    // ════════════════════════════════════════════
+    // LANGUAGE
+    // ════════════════════════════════════════════
+    function selectLanguage(lang) {
+      state.lang = lang;
+      localStorage.setItem('cnav_lang', lang);
+      document.getElementById('lang-screen').classList.add('hidden');
+      const mainApp = document.getElementById('main-app');
+      mainApp.style.display = 'flex';
+      mainApp.classList.remove('hidden');
+      const badge = document.getElementById('lang-badge');
+      badge.textContent = lang === 'he' ? '🇮🇱 עברית' : '🇺🇸 English';
+      // Flip direction for English
+      if (lang === 'en') {
+        document.documentElement.lang = 'en';
+        document.documentElement.dir = 'ltr';
+      } else {
+        document.documentElement.lang = 'he';
+        document.documentElement.dir = 'rtl';
+      }
+      applyI18n(lang);
+      switchTab('draw');
+      drawNewCard();
+      prefetchDeckImages(lang);
+    }
+
+    // Update every UI label/button/placeholder to match the active language.
+    // Called from selectLanguage() and also once at init if a saved lang exists.
+    function applyI18n(lang) {
+      const t = UI[lang] || UI.he;
+      // Flip hints
+      ['draw-flip-hint-front', 'draw-flip-hint-back',
+       'modal-flip-hint-front', 'modal-flip-hint-back'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = t.flipHint;
+      });
+      // Draw tab
+      document.getElementById('draw-card-label').textContent     = t.cardLabel;
+      document.getElementById('draw-email-btn-text').textContent  = t.drawEmailBtn;
+      document.getElementById('draw-new-btn').textContent         = t.drawNewCard;
+      // Bottom nav
+      document.getElementById('nav-label-draw').textContent    = t.navDraw;
+      document.getElementById('nav-label-browse').textContent  = t.navBrowse;
+      document.getElementById('nav-label-favs').textContent    = t.navFavs;
+      document.getElementById('nav-label-journal').textContent = t.navJournal;
+      // Card modal
+      document.getElementById('modal-notes-label').textContent    = t.myNotes;
+      document.getElementById('modal-note').placeholder           = t.notePlaceholder;
+      document.getElementById('modal-email-btn-text').textContent = t.modalEmailBtn;
+      // Email modal
+      document.getElementById('email-modal-title').textContent  = t.emailModalTitle;
+      document.getElementById('email-inspr-label').textContent  = t.inspirLabel;
+      document.getElementById('email-free-text').placeholder    = t.inspirPlaceholder;
+      document.getElementById('email-addr-label').textContent   = t.emailLabel;
+      document.getElementById('send-btn-text').textContent      = t.sendNow;
+    }
+
+    function showLangScreen() {
+      document.getElementById('main-app').style.display = 'none';
+      document.getElementById('lang-screen').classList.remove('hidden');
+    }
+
+    // ════════════════════════════════════════════
+    // OFFLINE PREFETCH
+    // After language selection, tell the SW to cache all card images
+    // for this deck so the app works fully offline on next visit.
+    // ════════════════════════════════════════════
+    function prefetchDeckImages(lang) {
+      if (!navigator.onLine) return;
+      if (!window.SUPABASE_STORAGE_BASE || window.SUPABASE_URL.includes('YOUR_PROJECT_REF')) return;
+      if (!('serviceWorker' in navigator)) return;
+
+      navigator.serviceWorker.ready.then(reg => {
+        if (!reg.active) return;
+        reg.active.postMessage({
+          type:        'PREFETCH_DECK',
+          lang,
+          storageBase: window.SUPABASE_STORAGE_BASE,
+          bucket:      CARD_CONFIG.buckets[lang],
+          total:       CARD_CONFIG.total,
+        });
+      }).catch(() => {});
+    }
+
+    let offlineBarTimer = null;
+    function showOfflineBar(msg, autoDismissMs = 0) {
+      const bar   = document.getElementById('offline-bar');
+      const msgEl = document.getElementById('offline-msg');
+      msgEl.textContent = msg;
+      bar.classList.remove('hidden');
+      clearTimeout(offlineBarTimer);
+      if (autoDismissMs > 0) {
+        offlineBarTimer = setTimeout(() => bar.classList.add('hidden'), autoDismissMs);
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // TAB SWITCHING
+    // ════════════════════════════════════════════
+    function switchTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-${name}`).classList.remove('hidden');
+      document.querySelector(`[data-tab="${name}"]`).classList.add('active');
+      const t = UI[state.lang] || UI.he;
+      const tabTitles = { draw: 'Change Navigator', browse: t.tabBrowse, favs: t.tabFavs, journal: t.tabJournal };
+      document.getElementById('top-title').textContent = tabTitles[name] || 'Change Navigator';
+      document.getElementById('content-area').scrollTop = 0;
+      if (name === 'browse')  renderBrowse();
+      if (name === 'favs')    renderFavs();
+      if (name === 'journal') renderJournal();
+    }
+
+    // ════════════════════════════════════════════
+    // DRAW TAB
+    // ════════════════════════════════════════════
+    function drawNewCard() {
+      let num;
+      do {
+        num = CARD_NUMBERS[Math.floor(Math.random() * 54)];
+      } while (state.currentCard && state.currentCard.num === num && CARD_NUMBERS.length > 1);
+
+      state.currentCard = {
+        num,
+        imgFront: getImageUrl(state.lang, num, 'front'),
+        imgBack:  getImageUrl(state.lang, num, 'back'),
+      };
+      state.drawFlipped = false;
+
+      document.getElementById('draw-card-inner').classList.remove('flipped');
+      document.getElementById('draw-img-front').src = state.currentCard.imgFront;
+      document.getElementById('draw-img-back').src  = state.currentCard.imgBack;
+      document.getElementById('draw-card-num').textContent = `#${num}`;
+      updateDrawFavBtn();
+    }
+
+    function flipDrawCard() {
+      state.drawFlipped = !state.drawFlipped;
+      document.getElementById('draw-card-inner').classList.toggle('flipped', state.drawFlipped);
+    }
+
+    function updateDrawFavBtn() {
+      if (!state.currentCard) return;
+      const fav = isFavorite(state.currentCard.num);
+      const t = UI[state.lang] || UI.he;
+      document.getElementById('fav-icon').textContent  = fav ? '★' : '☆';
+      document.getElementById('fav-label').textContent = fav ? t.favSaved : t.favSave;
+    }
+
+    function toggleFavDraw() {
+      if (!state.currentCard) return;
+      toggleFavorite(state.currentCard.num);
+      updateDrawFavBtn();
+    }
+
+    function openEmailFromDraw() {
+      if (!state.currentCard) return;
+      state.modalCard   = state.currentCard;
+      state.modalFlipped = state.drawFlipped;
+      openEmailModal();
+    }
+
+    // ════════════════════════════════════════════
+    // CARD THUMBNAIL FACTORY
+    // ════════════════════════════════════════════
+    function createThumb(num) {
+      const wrap = document.createElement('div');
+      wrap.className = 'relative rounded-xl overflow-hidden bg-slate-800 shadow-lg cursor-pointer active:scale-95 transition-transform';
+      wrap.style.aspectRatio = '2/3';
+
+      const img = document.createElement('img');
+      img.src = getImageUrl(state.lang, num, 'front');
+      img.alt = `Card ${num}`;
+      img.className = 'w-full h-full object-cover';
+      img.loading = 'lazy';
+      img.draggable = false;
+      img.onerror = () => { img.src = `https://placehold.co/200x300/1e293b/60a5fa?text=${num}`; };
+
+      const badge = document.createElement('span');
+      badge.className = 'absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full leading-none';
+      badge.textContent = `#${num}`;
+
+      wrap.appendChild(img);
+      wrap.appendChild(badge);
+      wrap.addEventListener('click', () => openCardModal(num));
+      return wrap;
+    }
+
+    // ════════════════════════════════════════════
+    // BROWSE TAB
+    // ════════════════════════════════════════════
+    function renderBrowse() {
+      const grid = document.getElementById('browse-grid');
+      if (grid.dataset.rendered === state.lang) return; // avoid re-render if same lang
+      grid.innerHTML = '';
+      CARD_NUMBERS.forEach(num => grid.appendChild(createThumb(num)));
+      grid.dataset.rendered = state.lang;
+    }
+
+    // ════════════════════════════════════════════
+    // FAVORITES TAB
+    // ════════════════════════════════════════════
+    function renderFavs() {
+      const grid = document.getElementById('favs-grid');
+      grid.innerHTML = '';
+      const favs = getFavorites();
+      if (favs.length === 0) {
+        const t = UI[state.lang] || UI.he;
+        grid.innerHTML = `
+          <p class="col-span-3 text-center text-slate-500 py-16 leading-loose">
+            ${t.favsEmpty}<br>
+            <span class="text-sm">${t.favsEmptyHint}</span>
+          </p>`;
+        return;
+      }
+      favs.forEach(num => grid.appendChild(createThumb(num)));
+    }
+
+    // ════════════════════════════════════════════
+    // JOURNAL TAB
+    // ════════════════════════════════════════════
+    function renderJournal() {
+      const list = document.getElementById('journal-list');
+      list.innerHTML = '';
+      const journal = getJournal();
+      const entries = Object.entries(journal)
+        .filter(([, v]) => v.text && v.text.trim())
+        .sort((a, b) => new Date(b[1].updatedAt) - new Date(a[1].updatedAt));
+
+      const t = UI[state.lang] || UI.he;
+      if (entries.length === 0) {
+        list.innerHTML = `
+          <p class="text-center text-slate-500 py-16 leading-loose">
+            ${t.journalEmpty}<br>
+            <span class="text-sm">${t.journalEmptyHint}</span>
+          </p>`;
+        return;
+      }
+
+      entries.forEach(([numStr, entry]) => {
+        const num  = Number(numStr);
+        const date = new Date(entry.updatedAt).toLocaleDateString(t.dateLocale, {
+          day: 'numeric', month: 'long', year: 'numeric'
+        });
+        const div = document.createElement('div');
+        div.className = 'flex gap-3 bg-white/5 border border-white/10 rounded-2xl p-4 cursor-pointer active:scale-[0.98] transition-transform';
+        div.innerHTML = `
+          <img src="${getImageUrl(state.lang, num, 'front')}"
+               class="w-14 rounded-xl object-cover flex-shrink-0" style="height:84px;"
+               loading="lazy"
+               onerror="this.src='https://placehold.co/56x84/1e293b/60a5fa?text=${num}'">
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-start mb-1 gap-2">
+              <span class="text-xs font-bold text-blue-400 flex-shrink-0">${t.cardNumLabel(num)}</span>
+              <span class="text-xs text-slate-500 text-left ltr:text-right">${date}</span>
+            </div>
+            <p class="text-sm text-white/80 line-clamp-2">${escHtml(entry.text)}</p>
+          </div>`;
+        div.addEventListener('click', () => openCardModal(num));
+        list.appendChild(div);
+      });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ════════════════════════════════════════════
+    // CARD MODAL
+    // ════════════════════════════════════════════
+    function openCardModal(num) {
+      state.modalCard = {
+        num,
+        imgFront: getImageUrl(state.lang, num, 'front'),
+        imgBack:  getImageUrl(state.lang, num, 'back'),
+      };
+      state.modalFlipped = false;
+
+      document.getElementById('modal-card-inner').classList.remove('flipped');
+      document.getElementById('modal-img-front').src = state.modalCard.imgFront;
+      document.getElementById('modal-img-back').src  = state.modalCard.imgBack;
+      document.getElementById('modal-card-num').textContent = (UI[state.lang] || UI.he).cardNumLabel(num);
+      document.getElementById('modal-note').value = getNote(num);
+      document.getElementById('modal-fav-btn').textContent  = isFavorite(num) ? '★' : '☆';
+
+      document.getElementById('card-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeCardModal() {
+      clearTimeout(noteSaveTimer);
+      if (state.modalCard) {
+        saveNote(state.modalCard.num, document.getElementById('modal-note').value);
+      }
+      document.getElementById('card-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+
+    function flipModalCard() {
+      state.modalFlipped = !state.modalFlipped;
+      document.getElementById('modal-card-inner').classList.toggle('flipped', state.modalFlipped);
+    }
+
+    function toggleFavModal() {
+      if (!state.modalCard) return;
+      toggleFavorite(state.modalCard.num);
+      document.getElementById('modal-fav-btn').textContent = isFavorite(state.modalCard.num) ? '★' : '☆';
+    }
+
+    // ════════════════════════════════════════════
+    // EMAIL MODAL
+    // ════════════════════════════════════════════
+    function openEmailModal() {
+      const card = state.modalCard || state.currentCard;
+      if (!card) return;
+
+      // Show whichever side is currently visible
+      const flipped = state.modalCard ? state.modalFlipped : state.drawFlipped;
+      document.getElementById('email-thumb').src = flipped ? card.imgBack : card.imgFront;
+
+      document.getElementById('email-free-text').value = '';
+      document.getElementById('email-input').value = '';
+      document.getElementById('email-input').style.borderColor = '';
+      document.getElementById('send-btn').disabled = false;
+      document.getElementById('send-btn-text').textContent = (UI[state.lang] || UI.he).sendNow;
+      document.getElementById('email-status').classList.add('hidden');
+
+      document.getElementById('email-modal').classList.remove('hidden');
+    }
+
+    function closeEmailModal() {
+      document.getElementById('email-modal').classList.add('hidden');
+    }
+
+    async function sendEmail() {
+      const card = state.modalCard || state.currentCard;
+      if (!card) return;
+
+      const emailInput = document.getElementById('email-input');
+      const email = emailInput.value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailInput.style.borderColor = '#ef4444';
+        emailInput.focus();
+        return;
+      }
+
+      const sendBtn     = document.getElementById('send-btn');
+      const sendBtnText = document.getElementById('send-btn-text');
+      const statusEl    = document.getElementById('email-status');
+
+      const t = UI[state.lang] || UI.he;
+      sendBtn.disabled = true;
+      sendBtnText.textContent = t.sending;
+
+      const flipped       = state.modalCard ? state.modalFlipped : state.drawFlipped;
+      const cardImageUrl  = flipped ? card.imgBack : card.imgFront;
+      const note          = document.getElementById('email-free-text').value.trim();
+
+      // EmailJS has a 50KB variable limit. Base64 data-URLs from locally-uploaded
+      // images are 300–800 KB, causing HTTP 413. Strip them — the email will still
+      // include the card number and the user's note.
+      const emailSafeImageUrl = cardImageUrl.startsWith('data:') ? '' : cardImageUrl;
+      const cardInfo = CARD_DATA_HE[card.num] || {};
+
+      try {
+        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          to_email:         email,
+          card_number:      String(card.num),
+          card_image_url:   emailSafeImageUrl,
+          user_note:        note || '—',
+          language:         state.lang === 'he' ? 'עברית' : 'English',
+          card_category:    cardInfo.category    || '',
+          card_quote:       cardInfo.quote       || '',
+          card_explanation: cardInfo.explanation || '',
+        });
+        statusEl.textContent = t.emailSuccess;
+        statusEl.className = 'text-center text-sm text-green-400';
+        statusEl.classList.remove('hidden');
+        sendBtnText.textContent = t.sent;
+        setTimeout(closeEmailModal, 2200);
+      } catch (err) {
+        console.error('EmailJS error:', err);
+        statusEl.textContent = t.emailError;
+        statusEl.className = 'text-center text-sm text-red-400';
+        statusEl.classList.remove('hidden');
+        sendBtnText.textContent = t.sendNow;
+        sendBtn.disabled = false;
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // IMAGE PROTECTION
+    // Blocks right-click context menu on images and prevents drag-to-save.
+    // The CSS pointer-events:none on card images is the primary guard;
+    // this JS listener is a fallback for any image that bypasses it.
+    // ════════════════════════════════════════════
+    document.addEventListener('contextmenu', e => {
+      if (e.target.tagName === 'IMG') e.preventDefault();
+    });
+    document.addEventListener('dragstart', e => {
+      if (e.target.tagName === 'IMG') e.preventDefault();
+    });
+
+    // ════════════════════════════════════════════
+    // KEYBOARD + TOUCH
+    // ════════════════════════════════════════════
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        if (!document.getElementById('email-modal').classList.contains('hidden')) {
+          closeEmailModal();
+        } else if (!document.getElementById('card-modal').classList.contains('hidden')) {
+          closeCardModal();
+        }
+      }
+    });
+
+    // Close modals on backdrop tap
+    document.getElementById('card-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('card-modal')) closeCardModal();
+    });
+    document.getElementById('email-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('email-modal')) closeEmailModal();
+    });
+
+    // ════════════════════════════════════════════
+    // SERVICE WORKER — prefetch progress messages
+    // ════════════════════════════════════════════
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', event => {
+        const { type, lang, progress } = event.data || {};
+        if (lang !== state.lang) return; // ignore messages for other language decks
+        if (type === 'PREFETCH_PROGRESS') {
+          showOfflineBar((UI[state.lang] || UI.he).offlineProgress(progress));
+        } else if (type === 'PREFETCH_DONE') {
+          showOfflineBar((UI[state.lang] || UI.he).offlineDone, 3500);
+        }
+      });
+    }
+
+    // ════════════════════════════════════════════
+    // INIT
+    // ════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', () => {
+      emailjs.init(EMAILJS_PUBLIC_KEY);
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
+
+      // Load admin-uploaded images from IndexedDB before showing content
+      loadLocalImages()
+        .catch(() => {}) // silently ignore if IndexedDB unavailable
+        .finally(() => {
+          if (state.lang) selectLanguage(state.lang);
+          // Otherwise lang-screen stays visible
+        });
+    });
+  </script>
+</body>
+</html>

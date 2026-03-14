@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Change Navigator</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Password shake animation */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-8px); }
+      40%,80% { transform: translateX(8px); }
+    }
+    .shake { animation: shake 0.4s ease; }
+
+    /* Upload button shimmer on hover */
+    .upload-btn:hover { background: rgba(96,165,250,0.15); }
+
+    /* Progress bar */
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .pulsing { animation: pulse 1s ease infinite; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+
+  <!-- ════════════════════════════════════════════
+       PASSWORD SCREEN
+  ════════════════════════════════════════════ -->
+  <div id="pw-screen" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center p-8">
+    <div class="flex items-center gap-3 mb-10">
+      <div class="bg-blue-500/20 p-3 rounded-2xl border border-blue-500/30">
+        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="#60a5fa" stroke-width="2" viewBox="0 0 24 24">
+          <rect width="18" height="11" x="3" y="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-black tracking-tight">Admin Panel</h1>
+        <p class="text-[10px] text-slate-400 tracking-[0.2em] uppercase">Change Navigator</p>
+      </div>
+    </div>
+
+    <div id="pw-box" class="w-full max-w-xs space-y-4">
+      <div class="text-center mb-2">
+        <p class="text-slate-400 text-sm">הזינו סיסמה להמשך</p>
+      </div>
+      <input type="password" id="pw-input" placeholder="••••"
+        class="w-full bg-white/10 border border-white/20 rounded-2xl px-5 py-4 text-white text-center text-2xl tracking-widest placeholder-slate-600 outline-none focus:border-blue-400 transition-colors"
+        onkeydown="if(event.key==='Enter') checkPassword()">
+      <button onclick="checkPassword()"
+        class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 rounded-2xl py-4 font-bold text-base transition-all active:scale-[0.98]">
+        כניסה
+      </button>
+      <p id="pw-error" class="text-center text-red-400 text-sm hidden">סיסמה שגויה. נסו שוב.</p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       ADMIN UI (hidden until authenticated)
+  ════════════════════════════════════════════ -->
+  <div id="admin-ui" class="hidden">
+
+    <!-- TOP BAR -->
+    <header class="sticky top-0 z-30 bg-slate-900 border-b border-white/10 px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="#60a5fa" stroke-width="2" viewBox="0 0 24 24">
+          <rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span class="font-black text-sm">Admin — ניהול קלפים</span>
+      </div>
+      <a href="app.html" class="text-xs text-slate-400 hover:text-white bg-white/10 px-3 py-1.5 rounded-full transition-colors">
+        ← לאפליקציה
+      </a>
+    </header>
+
+    <!-- EMAILJS CONFIG SECTION -->
+    <div class="px-4 py-4 bg-slate-800/60 border-b border-white/10">
+      <details id="emailjs-details">
+        <summary class="cursor-pointer flex items-center gap-2 text-sm font-bold text-slate-300 select-none list-none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="#60a5fa" stroke-width="2" viewBox="0 0 24 24">
+            <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+          </svg>
+          הגדרות EmailJS
+          <span id="emailjs-status-dot" class="w-2 h-2 rounded-full bg-slate-600 mr-auto"></span>
+        </summary>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Service ID</label>
+            <input type="text" id="ejs-service" placeholder="service_xxxxxxx" dir="ltr"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm outline-none focus:border-blue-400 transition-colors">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Template ID</label>
+            <input type="text" id="ejs-template" placeholder="template_xxxxxxx" dir="ltr"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm outline-none focus:border-blue-400 transition-colors">
+          </div>
+          <div class="sm:col-span-2 flex justify-end">
+            <button onclick="saveEmailJSConfig()"
+              class="bg-blue-600 hover:bg-blue-500 active:bg-blue-700 px-5 py-2 rounded-xl font-bold text-sm transition-all active:scale-95">
+              שמור הגדרות
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- SUPABASE CONFIG SECTION -->
+    <div class="px-4 py-4 bg-slate-800/60 border-b border-white/10">
+      <details id="supabase-details">
+        <summary class="cursor-pointer flex items-center gap-2 text-sm font-bold text-slate-300 select-none list-none">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="#34d399" stroke-width="2" viewBox="0 0 24 24">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/>
+            <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
+          </svg>
+          Supabase Storage
+          <span id="supabase-status-dot" class="w-2 h-2 rounded-full bg-slate-600 mr-auto"></span>
+        </summary>
+        <div class="mt-4 space-y-3">
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Project URL</label>
+            <input type="text" id="sb-url" placeholder="https://xxxxxxxxxxxx.supabase.co" dir="ltr"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm outline-none focus:border-emerald-400 transition-colors">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Service Role Key</label>
+            <input type="password" id="sb-key" placeholder="eyJ..." dir="ltr"
+              class="w-full mt-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white placeholder-slate-600 text-sm outline-none focus:border-emerald-400 transition-colors">
+            <p class="text-[11px] text-slate-500 mt-1">מפתח Service Role מ: Dashboard → Settings → API. נשמר מקומית בדפדפן בלבד.</p>
+          </div>
+          <div class="flex gap-2 justify-end">
+            <button onclick="testSupabaseConnection()"
+              class="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl font-bold text-sm transition-all active:scale-95 text-emerald-400">
+              בדוק חיבור
+            </button>
+            <button onclick="saveSupabaseConfig()"
+              class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 px-5 py-2 rounded-xl font-bold text-sm transition-all active:scale-95">
+              שמור
+            </button>
+          </div>
+          <div id="sb-test-result" class="hidden text-xs text-center py-1 rounded-lg"></div>
+          <p class="text-[11px] text-slate-500 border-t border-white/10 pt-3">
+            צרו שני buckets ב-Supabase Storage:
+            <code class="bg-black/30 px-1 rounded">cards-he</code> ו-<code class="bg-black/30 px-1 rounded">cards-en</code> (Public).
+            כאשר Supabase מוגדר, העלאת תמונות תשמור גם ב-Supabase וגם מקומית לתצוגה מקדימה.
+          </p>
+        </div>
+      </details>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="sticky top-14 z-20 bg-slate-900/95 backdrop-blur border-b border-white/10 px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+      <!-- Language tabs -->
+      <div class="flex gap-2">
+        <button id="tab-he" onclick="setLang('he')"
+          class="lang-tab active px-4 py-2 rounded-xl font-bold text-sm transition-all">
+          🇮🇱 עברית
+        </button>
+        <button id="tab-en" onclick="setLang('en')"
+          class="lang-tab px-4 py-2 rounded-xl font-bold text-sm transition-all bg-white/5 hover:bg-white/10 text-slate-400">
+          🇺🇸 English
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 items-center flex-wrap">
+        <!-- Storage usage -->
+        <span id="storage-info" class="text-xs text-slate-500 hidden sm:block"></span>
+
+        <!-- Bulk upload -->
+        <label class="cursor-pointer bg-blue-600 hover:bg-blue-500 active:bg-blue-700 px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          העלאה מרובה
+          <input type="file" multiple accept="image/*" class="hidden" onchange="handleBulkUpload(this.files)">
+        </label>
+
+        <!-- Clear language -->
+        <button onclick="clearLanguage()"
+          class="bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          מחק הכל
+        </button>
+      </div>
+    </div>
+
+    <!-- BULK PROGRESS -->
+    <div id="bulk-progress" class="hidden px-4 py-3 bg-blue-900/30 border-b border-blue-500/20">
+      <div class="flex items-center gap-3">
+        <div class="flex-1 bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div id="bulk-bar" class="bg-blue-500 h-full rounded-full transition-all" style="width:0%"></div>
+        </div>
+        <span id="bulk-label" class="text-xs text-blue-300 font-bold whitespace-nowrap">0 / 0</span>
+      </div>
+    </div>
+
+    <!-- NAMING CONVENTION HINT -->
+    <div class="px-4 py-3 bg-amber-900/20 border-b border-amber-500/20 text-amber-300 text-xs flex items-start gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="flex-shrink-0 mt-0.5">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span>
+        <strong>שם קובץ להעלאה מרובה:</strong> &nbsp;
+        <code class="bg-black/30 px-1 rounded">1F.png</code> (חזית) &nbsp;
+        <code class="bg-black/30 px-1 rounded">1B.png</code> (גב) &nbsp; — מספרים 1 עד 54
+      </span>
+    </div>
+
+    <!-- CARD GRID -->
+    <div id="card-grid" class="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <!-- filled by renderGrid() -->
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-white/10 rounded-2xl px-5 py-3 text-sm font-bold shadow-2xl transition-all"></div>
+
+  <style>
+    .lang-tab.active { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .lang-tab:not(.active) { background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid transparent; }
+  </style>
+
+  <script>
+    // ════════════════════════════════════════════
+    // CONSTANTS
+    // ════════════════════════════════════════════
+    const ADMIN_PASSWORD = '9989';
+    const CARD_NUMBERS   = Array.from({ length: 54 }, (_, i) => i + 1);
+    let currentLang = 'he';
+
+    // ════════════════════════════════════════════
+    // INDEXEDDB HELPERS
+    // ════════════════════════════════════════════
+    function openImageDB() {
+      return new Promise((res, rej) => {
+        const req = indexedDB.open('cnav-images', 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore('card-images');
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    function txComplete(tx) {
+      return new Promise((res, rej) => {
+        tx.oncomplete = res;
+        tx.onerror    = e => rej(e.target.error);
+      });
+    }
+
+    async function getStoredKeys() {
+      const db    = await openImageDB();
+      const store = db.transaction('card-images', 'readonly').objectStore('card-images');
+      return new Promise((res, rej) => {
+        const req = store.getAllKeys();
+        req.onsuccess = e => res(e.target.result);
+        req.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    async function getStoredImage(key) {
+      const db    = await openImageDB();
+      const store = db.transaction('card-images', 'readonly').objectStore('card-images');
+      return new Promise((res, rej) => {
+        const req = store.get(key);
+        req.onsuccess = e => res(e.target.result || null);
+        req.onerror   = e => rej(e.target.error);
+      });
+    }
+
+    async function putImage(key, dataUrl) {
+      const db = await openImageDB();
+      const tx = db.transaction('card-images', 'readwrite');
+      tx.objectStore('card-images').put(dataUrl, key);
+      return txComplete(tx);
+    }
+
+    async function deleteImage(key) {
+      const db = await openImageDB();
+      const tx = db.transaction('card-images', 'readwrite');
+      tx.objectStore('card-images').delete(key);
+      return txComplete(tx);
+    }
+
+    // ════════════════════════════════════════════
+    // AUTH
+    // ════════════════════════════════════════════
+    function checkPassword() {
+      const input = document.getElementById('pw-input');
+      if (input.value === ADMIN_PASSWORD) {
+        document.getElementById('pw-screen').classList.add('hidden');
+        document.getElementById('admin-ui').classList.remove('hidden');
+        initAdmin();
+      } else {
+        const box = document.getElementById('pw-box');
+        box.classList.add('shake');
+        document.getElementById('pw-error').classList.remove('hidden');
+        input.value = '';
+        input.focus();
+        setTimeout(() => box.classList.remove('shake'), 500);
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // LANGUAGE SWITCH
+    // ════════════════════════════════════════════
+    function setLang(lang) {
+      currentLang = lang;
+      document.getElementById('tab-he').classList.toggle('active', lang === 'he');
+      document.getElementById('tab-en').classList.toggle('active', lang === 'en');
+      renderGrid();
+    }
+
+    // ════════════════════════════════════════════
+    // FILE → DATA-URL
+    // ════════════════════════════════════════════
+    function fileToDataURL(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload  = e => res(e.target.result);
+        r.onerror = e => rej(e.target.error);
+        r.readAsDataURL(file);
+      });
+    }
+
+    // ════════════════════════════════════════════
+    // SAVE A SINGLE IMAGE
+    // ════════════════════════════════════════════
+    async function saveImage(lang, num, side, file) {
+      const dataUrl = await fileToDataURL(file);
+      const key     = `${lang}_${num}_${side}`;
+
+      // Save locally to IndexedDB for preview
+      await putImage(key, dataUrl);
+
+      // Also upload to Supabase Storage if configured (fire-and-forget)
+      uploadToSupabase(lang, num, side, file).catch(e => {
+        console.warn(`Supabase upload failed for ${lang} #${num} ${side}:`, e.message);
+      });
+
+      // Update the thumbnail in the DOM immediately
+      const thumb = document.getElementById(`thumb-${lang}-${num}-${side}`);
+      if (thumb) {
+        thumb.src = dataUrl;
+        thumb.classList.remove('opacity-20');
+        thumb.classList.add('opacity-100');
+      }
+      // Mark card as having this side uploaded
+      const indicator = document.getElementById(`dot-${lang}-${num}-${side}`);
+      if (indicator) indicator.classList.replace('bg-slate-600', 'bg-green-500');
+    }
+
+    // ════════════════════════════════════════════
+    // BULK UPLOAD (multi-file, naming convention)
+    // ════════════════════════════════════════════
+    async function handleBulkUpload(files) {
+      const matched = [];
+      for (const file of files) {
+        const m = file.name.match(/^(\d+)(F|B)\.(png|jpe?g|webp|gif)$/i);
+        if (!m) continue;
+        const num  = parseInt(m[1]);
+        const side = m[2].toUpperCase() === 'F' ? 'front' : 'back';
+        if (num < 1 || num > 54) continue;
+        matched.push({ file, num, side });
+      }
+
+      if (matched.length === 0) {
+        showToast('לא נמצאו קבצים תואמים (1F.png, 2B.png וכו\')', 'error');
+        return;
+      }
+
+      const progressEl = document.getElementById('bulk-progress');
+      const bar        = document.getElementById('bulk-bar');
+      const label      = document.getElementById('bulk-label');
+      progressEl.classList.remove('hidden');
+
+      for (let i = 0; i < matched.length; i++) {
+        const { file, num, side } = matched[i];
+        label.textContent = `${i + 1} / ${matched.length}`;
+        bar.style.width   = `${Math.round(((i + 1) / matched.length) * 100)}%`;
+        try {
+          await saveImage(currentLang, num, side, file);
+        } catch (e) {
+          console.warn(`Failed to save ${file.name}:`, e);
+        }
+      }
+
+      progressEl.classList.add('hidden');
+      bar.style.width = '0%';
+      showToast(`✓ הועלו ${matched.length} תמונות בהצלחה`);
+      updateStorageInfo();
+    }
+
+    // ════════════════════════════════════════════
+    // CLEAR LANGUAGE
+    // ════════════════════════════════════════════
+    async function clearLanguage() {
+      const langLabel = currentLang === 'he' ? 'עברית' : 'English';
+      if (!confirm(`מחק את כל תמונות ה${langLabel}?\nלא ניתן לשחזר.`)) return;
+
+      const keys    = await getStoredKeys();
+      const toDelete = keys.filter(k => k.startsWith(currentLang + '_'));
+      const db = await openImageDB();
+      const tx = db.transaction('card-images', 'readwrite');
+      const store = tx.objectStore('card-images');
+      toDelete.forEach(k => store.delete(k));
+      await txComplete(tx);
+
+      showToast(`✓ נמחקו ${toDelete.length} תמונות`);
+      renderGrid();
+      updateStorageInfo();
+    }
+
+    // ════════════════════════════════════════════
+    // DELETE SINGLE IMAGE
+    // ════════════════════════════════════════════
+    async function deleteSingleImage(lang, num, side) {
+      await deleteImage(`${lang}_${num}_${side}`);
+      const thumb = document.getElementById(`thumb-${lang}-${num}-${side}`);
+      if (thumb) {
+        thumb.src = placeholderUrl(lang, num, side);
+        thumb.classList.add('opacity-20');
+        thumb.classList.remove('opacity-100');
+      }
+      const dot = document.getElementById(`dot-${lang}-${num}-${side}`);
+      if (dot) dot.classList.replace('bg-green-500', 'bg-slate-600');
+    }
+
+    // ════════════════════════════════════════════
+    // GRID RENDERING
+    // ════════════════════════════════════════════
+    function placeholderUrl(lang, num, side) {
+      const s = side === 'front' ? 'F' : 'B';
+      return `https://placehold.co/200x300/1e293b/334155?text=${num}${s}`;
+    }
+
+    async function renderGrid() {
+      const grid = document.getElementById('card-grid');
+      grid.innerHTML = '<p class="col-span-full text-center text-slate-500 py-8 pulsing text-sm">טוען...</p>';
+
+      const storedKeys = await getStoredKeys();
+      const keySet     = new Set(storedKeys);
+
+      grid.innerHTML = '';
+      for (const num of CARD_NUMBERS) {
+        const hasFront = keySet.has(`${currentLang}_${num}_front`);
+        const hasBack  = keySet.has(`${currentLang}_${num}_back`);
+
+        // Card container
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800 rounded-2xl p-3 border border-white/10 space-y-2';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'flex items-center justify-between';
+        header.innerHTML = `
+          <span class="text-xs font-black text-slate-400">#${num}</span>
+          <div class="flex gap-1">
+            <span id="dot-${currentLang}-${num}-front" title="חזית" class="w-2 h-2 rounded-full ${hasFront ? 'bg-green-500' : 'bg-slate-600'}"></span>
+            <span id="dot-${currentLang}-${num}-back"  title="גב"   class="w-2 h-2 rounded-full ${hasBack  ? 'bg-green-500' : 'bg-slate-600'}"></span>
+          </div>`;
+        card.appendChild(header);
+
+        // Front + Back side by side
+        const sides = document.createElement('div');
+        sides.className = 'grid grid-cols-2 gap-1.5';
+
+        for (const side of ['front', 'back']) {
+          const hasImg = side === 'front' ? hasFront : hasBack;
+          const label  = side === 'front' ? 'חזית' : 'גב';
+
+          const wrap = document.createElement('div');
+          wrap.className = 'relative group';
+
+          // Thumbnail
+          const thumb = document.createElement('img');
+          thumb.id        = `thumb-${currentLang}-${num}-${side}`;
+          thumb.alt       = `${num} ${side}`;
+          thumb.className = `w-full rounded-xl object-cover ${hasImg ? 'opacity-100' : 'opacity-20'} transition-opacity`;
+          thumb.style.aspectRatio = '2/3';
+          thumb.src = placeholderUrl(currentLang, num, side);
+          thumb.loading = 'lazy';
+
+          // Load real image lazily from IndexedDB if it exists
+          if (hasImg) {
+            const capturedLang = currentLang;
+            const capturedNum  = num;
+            const capturedSide = side;
+            getStoredImage(`${capturedLang}_${capturedNum}_${capturedSide}`)
+              .then(dataUrl => { if (dataUrl) thumb.src = dataUrl; });
+          }
+
+          // Delete button (shown on hover)
+          const delBtn = document.createElement('button');
+          delBtn.title     = 'מחק תמונה';
+          delBtn.className = `absolute top-1 left-1 bg-red-600 hover:bg-red-500 rounded-full w-5 h-5 flex items-center justify-center text-white text-xs font-bold transition-all ${hasImg ? 'opacity-0 group-hover:opacity-100' : 'hidden'}`;
+          delBtn.innerHTML = '×';
+          delBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            deleteSingleImage(currentLang, num, side);
+            delBtn.classList.add('hidden');
+          });
+
+          // Upload label overlay (always visible, opens file picker)
+          const uploadLabel = document.createElement('label');
+          uploadLabel.className = 'absolute inset-0 flex flex-col items-center justify-end pb-2 cursor-pointer rounded-xl overflow-hidden';
+          uploadLabel.title = `העלה ${label} לקלף #${num}`;
+
+          const overlay = document.createElement('div');
+          overlay.className = 'w-full bg-black/60 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity';
+          overlay.innerHTML = `<span class="text-[10px] font-bold text-white">${label} ↑</span>`;
+
+          const fileInput = document.createElement('input');
+          fileInput.type   = 'file';
+          fileInput.accept = 'image/*';
+          fileInput.className = 'hidden';
+          fileInput.addEventListener('change', async () => {
+            if (fileInput.files[0]) {
+              await saveImage(currentLang, num, side, fileInput.files[0]);
+              delBtn.classList.remove('hidden');
+              delBtn.classList.remove('opacity-0');
+              updateStorageInfo();
+              showToast(`✓ קלף #${num} ${label} עודכן`);
+            }
+          });
+
+          uploadLabel.appendChild(overlay);
+          uploadLabel.appendChild(fileInput);
+
+          wrap.appendChild(thumb);
+          wrap.appendChild(delBtn);
+          wrap.appendChild(uploadLabel);
+          sides.appendChild(wrap);
+        }
+
+        card.appendChild(sides);
+        grid.appendChild(card);
+      }
+
+      updateStorageInfo();
+    }
+
+    // ════════════════════════════════════════════
+    // STORAGE INFO
+    // ════════════════════════════════════════════
+    async function updateStorageInfo() {
+      const infoEl = document.getElementById('storage-info');
+      try {
+        const keys  = await getStoredKeys();
+        const count = keys.filter(k => k.startsWith(currentLang + '_')).length;
+        if (navigator.storage && navigator.storage.estimate) {
+          const est  = await navigator.storage.estimate();
+          const usedMB = (est.usage / 1024 / 1024).toFixed(1);
+          const totalMB = (est.quota / 1024 / 1024).toFixed(0);
+          infoEl.textContent = `${count} תמונות | ${usedMB} MB מתוך ${totalMB} MB`;
+        } else {
+          infoEl.textContent = `${count} תמונות מאוחסנות`;
+        }
+        infoEl.classList.remove('hidden');
+      } catch (e) {
+        infoEl.classList.add('hidden');
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // TOAST NOTIFICATIONS
+    // ════════════════════════════════════════════
+    let toastTimer;
+    function showToast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-2xl px-5 py-3 text-sm font-bold shadow-2xl ${
+        type === 'error' ? 'bg-red-900 border border-red-500/30 text-red-200' : 'bg-slate-800 border border-white/10 text-white'
+      }`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden'), 3000);
+    }
+
+    // ════════════════════════════════════════════
+    // SUPABASE STORAGE
+    // ════════════════════════════════════════════
+    function getSupabaseConfig() {
+      const url = (localStorage.getItem('cnav_supabase_url') || '').replace(/\/$/, '');
+      const key = localStorage.getItem('cnav_supabase_key') || '';
+      if (!url || !key) return null;
+      return { url, key };
+    }
+
+    function loadSupabaseConfig() {
+      const url = localStorage.getItem('cnav_supabase_url') || '';
+      const key = localStorage.getItem('cnav_supabase_key') || '';
+      document.getElementById('sb-url').value = url;
+      document.getElementById('sb-key').value = key;
+      const dot = document.getElementById('supabase-status-dot');
+      const ok  = url && key && !url.includes('YOUR_PROJECT_REF');
+      dot.className = `w-2 h-2 rounded-full mr-auto ${ok ? 'bg-green-500' : 'bg-slate-600'}`;
+    }
+
+    function saveSupabaseConfig() {
+      const url = document.getElementById('sb-url').value.trim();
+      const key = document.getElementById('sb-key').value.trim();
+      if (!url || !key) { showToast('מלאו את שני השדות', 'error'); return; }
+      localStorage.setItem('cnav_supabase_url', url.replace(/\/$/, ''));
+      localStorage.setItem('cnav_supabase_key', key);
+      loadSupabaseConfig();
+      showToast('✓ הגדרות Supabase נשמרו');
+      document.getElementById('supabase-details').removeAttribute('open');
+    }
+
+    async function testSupabaseConnection() {
+      const url = document.getElementById('sb-url').value.trim().replace(/\/$/, '');
+      const key = document.getElementById('sb-key').value.trim();
+      const resultEl = document.getElementById('sb-test-result');
+
+      if (!url || !key) {
+        resultEl.textContent = 'הזינו URL ומפתח לפני הבדיקה';
+        resultEl.className   = 'text-xs text-center py-1 rounded-lg text-amber-400';
+        resultEl.classList.remove('hidden');
+        return;
+      }
+
+      resultEl.textContent = 'בודק...';
+      resultEl.className   = 'text-xs text-center py-1 rounded-lg text-slate-400';
+      resultEl.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`${url}/storage/v1/bucket`, {
+          headers: { 'Authorization': `Bearer ${key}` },
+        });
+        if (res.ok) {
+          const buckets = await res.json();
+          const names   = buckets.map(b => b.name).join(', ') || '(ריק)';
+          resultEl.textContent = `✓ חיבור תקין | Buckets: ${names}`;
+          resultEl.className   = 'text-xs text-center py-1 rounded-lg text-emerald-400';
+        } else {
+          resultEl.textContent = `שגיאה: ${res.status} ${res.statusText}`;
+          resultEl.className   = 'text-xs text-center py-1 rounded-lg text-red-400';
+        }
+      } catch (e) {
+        resultEl.textContent = `שגיאת חיבור: ${e.message}`;
+        resultEl.className   = 'text-xs text-center py-1 rounded-lg text-red-400';
+      }
+    }
+
+    async function uploadToSupabase(lang, num, side, file) {
+      const config = getSupabaseConfig();
+      if (!config) return; // not configured — skip silently
+
+      const bucket   = lang === 'he' ? 'cards-he' : 'cards-en';
+      const sideCode = side === 'front' ? 'F' : 'B';
+      const filename = `${num}${sideCode}.png`;
+
+      const response = await fetch(`${config.url}/storage/v1/object/${bucket}/${filename}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.key}`,
+          'Content-Type':  file.type || 'image/png',
+          'x-upsert':      'true', // overwrite existing file
+        },
+        body: file,
+      });
+
+      if (!response.ok) {
+        const text = await response.text().catch(() => response.statusText);
+        throw new Error(`Supabase: ${text}`);
+      }
+
+      // Tell the SW to evict this image from the cache so every user's app
+      // fetches the fresh version on their next load (not the stale cached one).
+      const publicUrl = `${config.url}/storage/v1/object/public/${bucket}/${filename}`;
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+          if (reg.active) reg.active.postMessage({ type: 'INVALIDATE_IMAGE', url: publicUrl });
+        }).catch(() => {});
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // EMAILJS CONFIG
+    // ════════════════════════════════════════════
+    function loadEmailJSConfig() {
+      const svc  = localStorage.getItem('cnav_emailjs_service')  || 'service_a85ap2g';
+      const tmpl = localStorage.getItem('cnav_emailjs_template') || 'template_xquxnon';
+      document.getElementById('ejs-service').value  = svc;
+      document.getElementById('ejs-template').value = tmpl;
+      // Show green dot if both are non-placeholder values
+      const dot = document.getElementById('emailjs-status-dot');
+      const ok  = svc && tmpl && !svc.includes('YOUR') && !tmpl.includes('YOUR');
+      dot.className = `w-2 h-2 rounded-full mr-auto ${ok ? 'bg-green-500' : 'bg-amber-500'}`;
+    }
+
+    function saveEmailJSConfig() {
+      const svc  = document.getElementById('ejs-service').value.trim();
+      const tmpl = document.getElementById('ejs-template').value.trim();
+      if (!svc || !tmpl) { showToast('מלאו את שני השדות', 'error'); return; }
+      localStorage.setItem('cnav_emailjs_service',  svc);
+      localStorage.setItem('cnav_emailjs_template', tmpl);
+      loadEmailJSConfig();
+      showToast('✓ הגדרות EmailJS נשמרו');
+      document.getElementById('emailjs-details').removeAttribute('open');
+    }
+
+    // ════════════════════════════════════════════
+    // INIT
+    // ════════════════════════════════════════════
+    async function initAdmin() {
+      loadEmailJSConfig();
+      loadSupabaseConfig();
+      await renderGrid();
+    }
+
+    // Allow pressing Enter on password field
+    document.getElementById('pw-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') checkPassword();
+    });
+  </script>
+</body>
+</html>
