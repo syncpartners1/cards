@@ -2,7 +2,7 @@
   "name": "change-navigator-cards",
   "version": "1.0.0",
   "scripts": {
-    "start": "serve . -l $PORT --single"
+    "start": "serve . --listen tcp://0.0.0.0:$PORT --single"
   },
   "dependencies": {
     "serve": "^14.0.0"
