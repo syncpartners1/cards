@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════════════════════════
-// CHANGE NAVIGATOR — Service Worker  (cnav-v8)
+// CHANGE NAVIGATOR — Service Worker  (cnav-v9)
 // ════════════════════════════════════════════════════════════════════════════
 //
 // Cache strategy:
-//   App shell   → cnav-v8        Cache-First, network fallback
-//   CDN assets  → cnav-v8        Cache on first fetch, then Cache-First
+//   HTML pages  → cnav-v9        Network-First (always fresh, cache as offline fallback)
+//   CDN assets  → cnav-v9        Cache on first fetch, then Cache-First
 //   Card images → cnav-cards-v1  Stale-While-Revalidate (Supabase Storage)
 //     • Serves cached copy instantly (fast, works offline)
 //     • Simultaneously fetches fresh version in background
@@ -15,7 +15,7 @@
 // Card images are in a separate cache so they survive app shell updates.
 // ════════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME  = 'cnav-v8';
+const CACHE_NAME  = 'cnav-v9';
 const CARDS_CACHE = 'cnav-cards-v1';
 
 // Local files that are always precached on install
@@ -92,6 +92,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // ── HTML navigation → Network-First ──────────────────────────────────────
+  // Always fetch fresh HTML from the network so stale/broken cached pages
+  // never block users. Falls back to cache only when truly offline.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        // Update the cache with the fresh response
+        if (response.ok) {
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
+        }
+        return response;
+      }).catch(() => caches.match(event.request) || caches.match('/app.html'))
+    );
+    return;
+  }
+
   // ── Everything else → Cache-First, cache CDN assets on first hit ─────────
   event.respondWith(
     caches.match(event.request).then(cached => {
@@ -116,12 +132,7 @@ self.addEventListener('fetch', event => {
         }
 
         return response;
-      }).catch(() => {
-        // Offline fallback: serve app shell for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('/app.html');
-        }
-      });
+      }).catch(() => null);
     })
   );
 });
