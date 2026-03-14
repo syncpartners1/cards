@@ -31,5 +31,10 @@ window.SUPABASE_STORAGE_BASE = window.SUPABASE_URL + '/storage/v1/object/public'
 // ─── App configuration ───────────────────────────────────────────────────────
 window.CARD_CONFIG = {
   buckets: { he: 'cards-he', en: 'cards-en' },
+  // Filename suffixes for each side, per language
+  sides: {
+    he: { front: 'F', back: 'B' },
+    en: { front: 'F', back: 'b' },  // English backs uploaded as lowercase 'b'
+  },
   total: 54,
 };

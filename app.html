@@ -611,7 +611,8 @@
       const localKey = `${lang}_${num}_${side}`;
       if (localImageCache.has(localKey)) return localImageCache.get(localKey);
 
-      const sideCode = side === 'front' ? 'F' : 'B';
+      const sides    = (CARD_CONFIG.sides && CARD_CONFIG.sides[lang]) || { front: 'F', back: 'B' };
+      const sideCode = side === 'front' ? sides.front : sides.back;
 
       if (window.SUPABASE_STORAGE_BASE && !window.SUPABASE_URL.includes('YOUR_PROJECT_REF')) {
         const bucket = CARD_CONFIG.buckets[lang];
