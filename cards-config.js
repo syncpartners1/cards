@@ -1,24 +1,22 @@
 /**
- * CHANGE NAVIGATOR — Supabase Storage Configuration
- * ==================================================
+ * CHANGE NAVIGATOR — Supabase Configuration
+ * ==========================================
  *
- * SETUP STEPS:
- * 1. Create a project at https://supabase.com
- * 2. Go to Storage → New bucket:
- *    • Name: "cards-he"  →  Toggle "Public bucket" ON
- *    • Name: "cards-en"  →  Toggle "Public bucket" ON
- * 3. Upload card images with the naming convention:
- *      {number}F.png  = front face  (e.g. 1F.png, 2F.png … 54F.png)
- *      {number}B.png  = back face   (e.g. 1B.png, 2B.png … 54B.png)
- *    Hebrew deck → bucket "cards-he"
- *    English deck → bucket "cards-en"
- * 4. Find your Project URL:
- *    Supabase Dashboard → Settings → API → Project URL
- *    It looks like: https://abcdefghijklmnop.supabase.co
- * 5. Replace YOUR_PROJECT_REF below with your actual project reference.
+ * Project:   https://knwtuilsyrwxvnyzamkh.supabase.co
+ * Dashboard: https://supabase.com/dashboard/project/knwtuilsyrwxvnyzamkh
  *
- * You can also upload images directly from the Admin panel (admin.html)
- * once you add your Supabase credentials there.
+ * ── Client-side (used by this app) ───────────────────────────────────────────
+ *   API URL:  https://knwtuilsyrwxvnyzamkh.supabase.co
+ *   Anon key: see SUPABASE_ANON_KEY below (safe to expose — public bucket access only)
+ *
+ * ── Direct database connection (server-side / Railway env vars only) ─────────
+ *   postgresql://postgres:[PASSWORD]@db.knwtuilsyrwxvnyzamkh.supabase.co:5432/postgres
+ *   ⚠ Never put the real password in client-side code — use Railway environment variables.
+ *
+ * ── Storage buckets ──────────────────────────────────────────────────────────
+ *   cards-he  (public)  — Hebrew card images
+ *   cards-en  (public)  — English card images
+ *   Naming: {number}F.png = front, {number}B.png = back  (e.g. 1F.png … 54B.png)
  */
 
 // ─── Your Supabase project URL ───────────────────────────────────────────────

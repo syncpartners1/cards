@@ -14,10 +14,10 @@ Git branch: `claude/migrate-to-railway-4sCTd`
 |---|---|
 | Frontend | Vanilla HTML/JS, Tailwind CSS (CDN), Inter font |
 | PWA | `manifest.json` + `sw.js` (cache-first service worker) |
-| Image storage | IndexedDB (`cnav-images` DB, `card-images` store) |
+| Image storage | Supabase Storage (buckets: `cards-he`, `cards-en`) + IndexedDB cache |
 | Email | EmailJS (client-side, no backend) |
-| Deployment | Railway static site (`npx serve`) |
-| Card images | Google Drive (`drive.google.com/uc?export=view&id=FILE_ID`) |
+| Deployment | Railway — https://cnapp.up.railway.app |
+| Database | Supabase — https://knwtuilsyrwxvnyzamkh.supabase.co |
 
 ---
 
@@ -47,6 +47,20 @@ Git branch: `claude/migrate-to-railway-4sCTd`
 | `cnav_journal` | JSON object keyed by card number, stores journal notes |
 | `cnav_emailjs_service` | EmailJS Service ID (overrides hardcoded default) |
 | `cnav_emailjs_template` | EmailJS Template ID (overrides hardcoded default) |
+
+---
+
+## Supabase Configuration
+
+| Setting | Value |
+|---|---|
+| Project URL | `https://knwtuilsyrwxvnyzamkh.supabase.co` |
+| Dashboard | `https://supabase.com/dashboard/project/knwtuilsyrwxvnyzamkh` |
+| Anon key | see `cards-config.js` (public, storage read-only) |
+| Direct DB | `postgresql://postgres:[PASSWORD]@db.knwtuilsyrwxvnyzamkh.supabase.co:5432/postgres` |
+| Storage buckets | `cards-he` (Hebrew), `cards-en` (English) — both public |
+
+> The direct DB connection string is for server-side use only. Store the password in Railway environment variables, never in client-side code.
 
 ---
 
