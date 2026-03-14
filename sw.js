@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════════════════════════
-// CHANGE NAVIGATOR — Service Worker  (cnav-v11)
+// CHANGE NAVIGATOR — Service Worker  (cnav-v12)
 // ════════════════════════════════════════════════════════════════════════════
 //
 // Cache strategy:
-//   HTML pages  → cnav-v11       Network-First (always fresh, cache as offline fallback)
-//   CDN assets  → cnav-v11       Cache on first fetch, then Cache-First
+//   HTML + config → cnav-v12     Network-First (always fresh, cache as offline fallback)
+//   CDN assets    → cnav-v12     Cache on first fetch, then Cache-First
 //   Card images → cnav-cards-v1  Stale-While-Revalidate (Supabase Storage)
 //     • Serves cached copy instantly (fast, works offline)
 //     • Simultaneously fetches fresh version in background
@@ -15,7 +15,7 @@
 // Card images are in a separate cache so they survive app shell updates.
 // ════════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME  = 'cnav-v11';
+const CACHE_NAME  = 'cnav-v12';
 const CARDS_CACHE = 'cnav-cards-v1';
 
 // Local files that are always precached on install
@@ -92,10 +92,10 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ── HTML navigation → Network-First ──────────────────────────────────────
-  // Always fetch fresh HTML from the network so stale/broken cached pages
-  // never block users. Falls back to cache only when truly offline.
-  if (event.request.mode === 'navigate') {
+  // ── HTML + config → Network-First ────────────────────────────────────────
+  // Always fetch fresh HTML and cards-config.js so stale cached versions
+  // never serve outdated configuration to users. Falls back to cache offline.
+  if (event.request.mode === 'navigate' || url.endsWith('/cards-config.js')) {
     event.respondWith(
       fetch(event.request).then(response => {
         // Update the cache with the fresh response
