@@ -41,12 +41,12 @@
 
     /* ── Layout ───────────────────────────────── */
     #content-area {
-      height: calc(100dvh - 56px - 64px - env(safe-area-inset-bottom, 0px));
+      height: calc(100dvh - 56px - 82px - env(safe-area-inset-bottom, 0px));
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
     #bottom-nav {
-      height: calc(64px + env(safe-area-inset-bottom, 0px));
+      height: calc(82px + env(safe-area-inset-bottom, 0px));
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
@@ -248,34 +248,42 @@
     </main>
 
     <!-- BOTTOM NAVIGATION -->
-    <nav id="bottom-nav" class="bg-slate-900 border-t border-white/10 flex items-start pt-2 flex-shrink-0">
-      <button data-tab="draw" onclick="switchTab('draw')" class="nav-btn active flex-1 flex flex-col items-center gap-1 py-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
-        </svg>
-        <span id="nav-label-draw" class="text-[10px] font-bold">קלף יומי</span>
-      </button>
-      <button data-tab="browse" onclick="switchTab('browse')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        <span id="nav-label-browse" class="text-[10px] font-bold">כל הקלפים</span>
-      </button>
-      <button data-tab="favs" onclick="switchTab('favs')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-        </svg>
-        <span id="nav-label-favs" class="text-[10px] font-bold">מועדפים</span>
-      </button>
-      <button data-tab="journal" onclick="switchTab('journal')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <span id="nav-label-journal" class="text-[10px] font-bold">יומן</span>
-      </button>
+    <nav id="bottom-nav" class="bg-slate-900 border-t border-white/10 flex flex-col flex-shrink-0">
+      <div class="flex items-start pt-2">
+        <button data-tab="draw" onclick="switchTab('draw')" class="nav-btn active flex-1 flex flex-col items-center gap-1 py-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+          <span id="nav-label-draw" class="text-[10px] font-bold">קלף יומי</span>
+        </button>
+        <button data-tab="browse" onclick="switchTab('browse')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+          </svg>
+          <span id="nav-label-browse" class="text-[10px] font-bold">כל הקלפים</span>
+        </button>
+        <button data-tab="favs" onclick="switchTab('favs')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span id="nav-label-favs" class="text-[10px] font-bold">מועדפים</span>
+        </button>
+        <button data-tab="journal" onclick="switchTab('journal')" class="nav-btn flex-1 flex flex-col items-center gap-1 py-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          </svg>
+          <span id="nav-label-journal" class="text-[10px] font-bold">יומן</span>
+        </button>
+      </div>
+      <div class="text-center pb-1">
+        <a id="copyright-line" href="https://www.ben-nesher.com" target="_blank" rel="noopener"
+           class="text-[9px] text-slate-500 hover:text-slate-300 transition-colors leading-none">
+          כל הזכויות שמורות לעדי בן נשר - ייעוץ אימון וליווי לשינוי
+        </a>
+      </div>
     </nav>
   </div>
 
@@ -522,6 +530,7 @@
         offlineProgress:   p => `⬇ מוריד קלפים לשימוש ללא חיבור... ${p}%`,
         offlineDone:       '✓ כל הקלפים מוכנים לשימוש ללא חיבור',
         dateLocale:        'he-IL',
+        copyright:         'כל הזכויות שמורות לעדי בן נשר - ייעוץ אימון וליווי לשינוי',
       },
       en: {
         flipHint:          'Tap to flip ↺',
@@ -557,6 +566,7 @@
         offlineProgress:   p => `⬇ Downloading cards for offline use... ${p}%`,
         offlineDone:       '✓ All cards ready for offline use',
         dateLocale:        'en-US',
+        copyright:         'All rights reserved to Adi Ben-Nesher - coaching and advisory for leading change',
       },
     };
 
@@ -705,6 +715,7 @@
       document.getElementById('nav-label-browse').textContent  = t.navBrowse;
       document.getElementById('nav-label-favs').textContent    = t.navFavs;
       document.getElementById('nav-label-journal').textContent = t.navJournal;
+      document.getElementById('copyright-line').textContent    = t.copyright;
       // Card modal
       document.getElementById('modal-notes-label').textContent    = t.myNotes;
       document.getElementById('modal-note').placeholder           = t.notePlaceholder;

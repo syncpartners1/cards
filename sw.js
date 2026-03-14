@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════════════════════════
-// CHANGE NAVIGATOR — Service Worker  (cnav-v10)
+// CHANGE NAVIGATOR — Service Worker  (cnav-v11)
 // ════════════════════════════════════════════════════════════════════════════
 //
 // Cache strategy:
-//   HTML pages  → cnav-v10       Network-First (always fresh, cache as offline fallback)
-//   CDN assets  → cnav-v10       Cache on first fetch, then Cache-First
+//   HTML pages  → cnav-v11       Network-First (always fresh, cache as offline fallback)
+//   CDN assets  → cnav-v11       Cache on first fetch, then Cache-First
 //   Card images → cnav-cards-v1  Stale-While-Revalidate (Supabase Storage)
 //     • Serves cached copy instantly (fast, works offline)
 //     • Simultaneously fetches fresh version in background
@@ -15,7 +15,7 @@
 // Card images are in a separate cache so they survive app shell updates.
 // ════════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME  = 'cnav-v10';
+const CACHE_NAME  = 'cnav-v11';
 const CARDS_CACHE = 'cnav-cards-v1';
 
 // Local files that are always precached on install
