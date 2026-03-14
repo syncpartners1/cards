@@ -1,10 +1,10 @@
 // ════════════════════════════════════════════════════════════════════════════
-// CHANGE NAVIGATOR — Service Worker  (cnav-v9)
+// CHANGE NAVIGATOR — Service Worker  (cnav-v10)
 // ════════════════════════════════════════════════════════════════════════════
 //
 // Cache strategy:
-//   HTML pages  → cnav-v9        Network-First (always fresh, cache as offline fallback)
-//   CDN assets  → cnav-v9        Cache on first fetch, then Cache-First
+//   HTML pages  → cnav-v10       Network-First (always fresh, cache as offline fallback)
+//   CDN assets  → cnav-v10       Cache on first fetch, then Cache-First
 //   Card images → cnav-cards-v1  Stale-While-Revalidate (Supabase Storage)
 //     • Serves cached copy instantly (fast, works offline)
 //     • Simultaneously fetches fresh version in background
@@ -15,7 +15,7 @@
 // Card images are in a separate cache so they survive app shell updates.
 // ════════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME  = 'cnav-v9';
+const CACHE_NAME  = 'cnav-v10';
 const CARDS_CACHE = 'cnav-cards-v1';
 
 // Local files that are always precached on install
@@ -141,6 +141,12 @@ self.addEventListener('fetch', event => {
 // PREFETCH_DECK   — bulk-download all images for a language deck (offline prep)
 // INVALIDATE_IMAGE — evict one specific image URL from cache (after admin upload)
 self.addEventListener('message', event => {
+  // App update: page asks the waiting SW to take over immediately
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+
   // Force-evict a single cached image so the next fetch gets fresh from Supabase
   if (event.data?.type === 'INVALIDATE_IMAGE') {
     const { url } = event.data;

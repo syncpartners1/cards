@@ -1085,6 +1085,24 @@
     });
 
     // ════════════════════════════════════════════
+    // UPDATE BANNER
+    // ════════════════════════════════════════════
+    function showUpdateBanner() {
+      document.getElementById('update-banner').style.display = 'flex';
+    }
+
+    function applyUpdate() {
+      // Tell the waiting SW to take over — controllerchange will then reload
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg && reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } else {
+          window.location.reload();
+        }
+      });
+    }
+
+    // ════════════════════════════════════════════
     // SERVICE WORKER — prefetch progress messages
     // ════════════════════════════════════════════
     if ('serviceWorker' in navigator) {
@@ -1106,7 +1124,27 @@
       emailjs.init(EMAILJS_PUBLIC_KEY);
 
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => {
+            // Check for a new SW version on every app launch
+            reg.update();
+
+            // New SW found and installed — show update banner
+            reg.addEventListener('updatefound', () => {
+              const incoming = reg.installing;
+              incoming.addEventListener('statechange', () => {
+                if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
+                  showUpdateBanner();
+                }
+              });
+            });
+          })
+          .catch(() => {});
+
+        // New SW has taken control — reload to apply it
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        });
       }
 
       // Load admin-uploaded images from IndexedDB before showing content
@@ -1118,5 +1156,21 @@
         });
     });
   </script>
+
+  <!-- Update notification banner (hidden until new SW is ready) -->
+  <div id="update-banner" style="display:none"
+       class="fixed top-0 inset-x-0 z-50 bg-blue-600 text-white flex items-center justify-between gap-3 px-4 py-3 shadow-lg">
+    <div class="flex items-center gap-2 min-w-0">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582M20 20v-5h-.581M4.582 9A8 8 0 0120 15M19.418 15A8 8 0 014 9"/>
+      </svg>
+      <span class="text-sm font-medium truncate">עדכון חדש זמין &nbsp;·&nbsp; New version available</span>
+    </div>
+    <button onclick="applyUpdate()"
+            class="shrink-0 bg-white text-blue-600 font-bold text-sm rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors">
+      עדכן / Update
+    </button>
+  </div>
+
 </body>
 </html>
