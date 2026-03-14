@@ -3,8 +3,8 @@
 ## Project Overview
 **Change Navigator** is a PWA (Progressive Web App) built for ABN Consulting.
 It presents 54 inspiration cards in Hebrew and English decks, allowing users to draw a random card, browse all cards, save favorites, keep a personal journal, and email cards to themselves.
-Deployed at: https://change-navigator-cards.netlify.app
-Git branch: `claude/inspiration-cards-app-7MrYC`
+Deployed at: https://cnapp.up.railway.app
+Git branch: `claude/migrate-to-railway-4sCTd`
 
 ---
 
@@ -14,10 +14,10 @@ Git branch: `claude/inspiration-cards-app-7MrYC`
 |---|---|
 | Frontend | Vanilla HTML/JS, Tailwind CSS (CDN), Inter font |
 | PWA | `manifest.json` + `sw.js` (cache-first service worker) |
-| Image storage | IndexedDB (`cnav-images` DB, `card-images` store) |
+| Image storage | Supabase Storage (buckets: `cards-he`, `cards-en`) + IndexedDB cache |
 | Email | EmailJS (client-side, no backend) |
-| Deployment | Netlify static site |
-| Card images | Google Drive (`drive.google.com/uc?export=view&id=FILE_ID`) |
+| Deployment | Railway — https://cnapp.up.railway.app |
+| Database | Supabase — https://knwtuilsyrwxvnyzamkh.supabase.co |
 
 ---
 
@@ -32,7 +32,9 @@ Git branch: `claude/inspiration-cards-app-7MrYC`
 | `sw.js` | Cache-first service worker — precaches all app files for offline use |
 | `icon.svg` | Shield logo SVG used as home screen icon |
 | `index.html` | Landing page with QR code linking to `app.html`, install instructions, subtle Admin link |
-| `netlify.toml` | Netlify config — publish root `.`, SPA redirect, cache headers |
+| `railway.toml` | Railway config — nixpacks builder, `npx serve` start command |
+| `serve.json` | Serve config — SPA rewrite, cache headers (used by Railway) |
+| `netlify.toml` | Legacy Netlify config (kept for reference) |
 
 ---
 
@@ -45,6 +47,20 @@ Git branch: `claude/inspiration-cards-app-7MrYC`
 | `cnav_journal` | JSON object keyed by card number, stores journal notes |
 | `cnav_emailjs_service` | EmailJS Service ID (overrides hardcoded default) |
 | `cnav_emailjs_template` | EmailJS Template ID (overrides hardcoded default) |
+
+---
+
+## Supabase Configuration
+
+| Setting | Value |
+|---|---|
+| Project URL | `https://knwtuilsyrwxvnyzamkh.supabase.co` |
+| Dashboard | `https://supabase.com/dashboard/project/knwtuilsyrwxvnyzamkh` |
+| Anon key | see `cards-config.js` (public, storage read-only) |
+| Direct DB | `postgresql://postgres:[PASSWORD]@db.knwtuilsyrwxvnyzamkh.supabase.co:5432/postgres` |
+| Storage buckets | `cards-he` (Hebrew), `cards-en` (English) — both public |
+
+> The direct DB connection string is for server-side use only. Store the password in Railway environment variables, never in client-side code.
 
 ---
 
@@ -85,7 +101,7 @@ Git branch: `claude/inspiration-cards-app-7MrYC`
 - Created `cards-config.js` with 54-card × 2-language Drive ID structure (placeholders)
 - Created `admin.html` — password gate (`9989`), language tabs, 54-card upload grid, bulk upload by filename convention (`1F.png`, `1B.png` … `54B.png`), per-card delete, storage usage display
 - Created `manifest.json`, `sw.js`, `icon.svg`, `index.html` landing page
-- Created `netlify.toml` for Netlify static deploy
+- Created `netlify.toml` for Netlify static deploy (later migrated to Railway)
 
 ### Session 2 — Bug Fixes
 
@@ -124,7 +140,7 @@ Git branch: `claude/inspiration-cards-app-7MrYC`
 ## Pending / Future Work
 
 - [ ] Fill in Google Drive file IDs in `cards-config.js` (run the included Google Apps Script, or paste IDs manually)
-- [ ] Merge GitHub PR from `claude/inspiration-cards-app-7MrYC` → `main` for Netlify auto-deploy from main
+- [ ] Connect Railway project to the `master` branch for auto-deploy
 - [ ] Add English card content data (`CARD_DATA_EN`) if/when English deck content is available
 - [ ] Optionally: add push notifications or share-sheet integration for mobile
 
