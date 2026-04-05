@@ -1,0 +1,36 @@
+name: Supabase Keep-Alive
+
+# Ping the Supabase project every 3 days to prevent free-tier auto-pause.
+# Supabase pauses projects after ~7 days of inactivity; 3-day interval gives 2x safety margin.
+
+on:
+  schedule:
+    - cron: '0 9 */3 * *'   # 09:00 UTC on days 1, 4, 7, 10... of each month
+  workflow_dispatch:          # Allow manual trigger for testing
+
+jobs:
+  ping:
+    name: Ping Supabase Storage
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping public storage image (HEAD request)
+        run: |
+          echo "Pinging Supabase project at $(date -u)"
+          HTTP_STATUS=$(curl \
+            --silent \
+            --output /dev/null \
+            --write-out "%{http_code}" \
+            --head \
+            --max-time 30 \
+            --retry 3 \
+            --retry-delay 10 \
+            --retry-connrefused \
+            "https://knwtuilsyrwxvnyzamkh.supabase.co/storage/v1/object/public/cards-he/1F.png")
+          echo "HTTP status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "ERROR: Unexpected HTTP status $HTTP_STATUS — Supabase project may be paused."
+            exit 1
+          fi
+          echo "OK: Supabase project is active."
