@@ -15,7 +15,7 @@
 // Card images are in a separate cache so they survive app shell updates.
 // ════════════════════════════════════════════════════════════════════════════
 
-const CACHE_NAME  = 'cnav-v6';
+const CACHE_NAME  = 'cnav-v7';
 const CARDS_CACHE = 'cnav-cards-v1';
 
 // Local files that are always precached on install
@@ -23,6 +23,7 @@ const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/app.html',
+  '/admin.html',
   '/cards-config.js',
   '/manifest.json',
   '/icon.svg',
