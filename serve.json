@@ -1,5 +1,9 @@
 {
   "public": ".",
+  "redirects": [
+    { "source": "/admin", "destination": "/admin.html", "type": 301 },
+    { "source": "/app",   "destination": "/app.html",   "type": 301 }
+  ],
   "headers": [
     {
       "source": "/sw.js",
