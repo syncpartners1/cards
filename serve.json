@@ -1,6 +1,9 @@
 {
   "public": ".",
   "cleanUrls": false,
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" }
+  ],
   "redirects": [
     { "source": "/admin", "destination": "/admin.html", "type": 301 },
     { "source": "/app",   "destination": "/app.html",   "type": 301 }
